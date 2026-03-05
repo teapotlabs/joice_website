@@ -560,7 +560,7 @@ footer {
 
     .hero h1 { font-size: 36px; }
     .hero-sub { margin: 0 auto 32px; }
-    .hero-visual { order: -1; }
+    .hero-visual { display: none; }
 
     .phone-mockup {
         width: 220px;
