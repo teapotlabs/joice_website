@@ -547,6 +547,158 @@ footer {
 .legal-page a:hover { text-decoration: underline; }
 
 /* ============================================
+   Support Page
+   ============================================ */
+
+.support-page {
+    padding: 120px 24px 80px;
+    max-width: var(--max-width);
+    margin: 0 auto;
+}
+
+.support-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 48px;
+    border-radius: var(--radius-xl);
+    background:
+        radial-gradient(circle at top right, rgba(193, 127, 89, 0.16), transparent 28%),
+        radial-gradient(circle at 20% 30%, rgba(184, 134, 11, 0.10), transparent 22%),
+        linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-parchment) 100%);
+    border: 1px solid rgba(193, 127, 89, 0.12);
+    box-shadow: 0 24px 72px rgba(23, 21, 15, 0.06);
+    margin-bottom: 32px;
+}
+
+.support-kicker {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 18px;
+}
+
+.support-hero h1,
+.support-section-heading h2 {
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -1.3px;
+    max-width: 760px;
+}
+
+.support-intro {
+    margin-top: 20px;
+    max-width: 680px;
+    font-size: 18px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.support-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 28px;
+}
+
+.support-secondary-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.support-secondary-link:hover {
+    color: var(--primary);
+}
+
+.support-hero-note {
+    margin-top: 18px;
+    font-size: 14px;
+    color: var(--text-tertiary);
+}
+
+.support-grid,
+.faq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.support-card,
+.faq-card {
+    background: var(--bg-cream);
+    border: 1px solid rgba(193, 127, 89, 0.10);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: 0 18px 52px rgba(23, 21, 15, 0.04);
+}
+
+.support-card-primary {
+    background:
+        radial-gradient(circle at top left, rgba(193, 127, 89, 0.12), transparent 28%),
+        var(--bg-cream);
+}
+
+.support-card h2,
+.faq-card h3 {
+    color: var(--text-primary);
+    letter-spacing: -0.4px;
+}
+
+.support-card h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.support-card p,
+.faq-card p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.support-list {
+    margin-top: 18px;
+    padding-left: 20px;
+}
+
+.support-list li {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+
+.support-list a,
+.faq-card a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.support-list a:hover,
+.faq-card a:hover {
+    text-decoration: underline;
+}
+
+.support-faq {
+    margin-top: 56px;
+}
+
+.support-section-heading {
+    margin-bottom: 28px;
+}
+
+.support-section-heading h2 {
+    font-size: 36px;
+}
+
+.faq-card h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+/* ============================================
    Responsive
    ============================================ */
 
@@ -584,4 +736,32 @@ footer {
     .nav-links a:not(.btn-nav) { display: none; }
 
     blockquote p { font-size: 18px; }
+
+    .support-page {
+        padding: 104px 24px 64px;
+    }
+
+    .support-hero {
+        padding: 32px 24px;
+    }
+
+    .support-hero h1,
+    .support-section-heading h2 {
+        font-size: 30px;
+    }
+
+    .support-intro {
+        font-size: 16px;
+    }
+
+    .support-actions,
+    .support-grid,
+    .faq-grid {
+        grid-template-columns: 1fr;
+        display: grid;
+    }
+
+    .support-actions {
+        gap: 12px;
+    }
 }
