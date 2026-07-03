@@ -8,18 +8,20 @@
     <meta property="og:title" content="Joice — Voice Journaling with AI">
     <meta property="og:description" content="Journal by voice with an AI companion that listens like a friend.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://joice.app">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+    <meta property="og:url" content="https://joiceapp.com">
+    <meta property="og:image" content="https://joiceapp.com/assets/joice-icon.png">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Nav -->
     <nav>
         <div class="nav-inner">
-            <a href="index.html" class="logo">joice</a>
+            <a href="index.html" class="logo"><img src="assets/joice-icon.png" alt="">joice</a>
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#how-it-works">How It Works</a>
@@ -29,78 +31,103 @@
     </nav>
 
     <!-- Hero -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">Voice Journaling, Reimagined</div>
-            <h1>Talk through your thoughts.<br><span class="highlight">Joice listens.</span></h1>
-            <p class="hero-sub">An AI companion that listens like a friend — not a therapist, not a chatbot. Just someone who gets it. Journal by voice, discover patterns, and understand yourself better.</p>
-            <div class="hero-cta">
-                <a href="#download" class="btn-primary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                    Download for iOS
-                </a>
+    <header class="hero">
+        <img class="hero-cloud hero-cloud-1" src="assets/cloud.png" alt="">
+        <img class="hero-cloud hero-cloud-2" src="assets/cloud.png" alt="">
+        <img class="hero-cloud hero-cloud-3" src="assets/cloud.png" alt="">
+        <div class="hero-grid">
+            <div class="hero-content">
+                <div class="hero-badge">Voice journaling with AI</div>
+                <h1>Talk through your thoughts. <em>Joice listens.</em></h1>
+                <p class="hero-sub">An AI companion that listens like a friend — not a therapist, not a chatbot. Journal out loud, discover your patterns, and understand yourself better.</p>
+                <div class="hero-cta">
+                    <a href="#download" class="btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        Download for iOS
+                    </a>
+                    <a href="#how-it-works" class="btn-ghost">See how it works</a>
+                </div>
+                <p class="hero-note">Free to try · No credit card required</p>
             </div>
-            <p class="hero-note">Free to try · No credit card required</p>
-        </div>
-        <div class="hero-visual">
-            <div class="phone-mockup">
-                <div class="phone-screen">
-                    <div class="mock-status-bar"></div>
-                    <div class="mock-greeting">Hey, what's on your mind?</div>
-                    <div class="mock-wave">
-                        <div class="wave-bar" style="height: 20px"></div>
-                        <div class="wave-bar" style="height: 35px"></div>
-                        <div class="wave-bar" style="height: 28px"></div>
-                        <div class="wave-bar" style="height: 45px"></div>
-                        <div class="wave-bar" style="height: 32px"></div>
-                        <div class="wave-bar" style="height: 50px"></div>
-                        <div class="wave-bar" style="height: 38px"></div>
-                        <div class="wave-bar" style="height: 25px"></div>
-                        <div class="wave-bar" style="height: 42px"></div>
-                        <div class="wave-bar" style="height: 30px"></div>
-                        <div class="wave-bar" style="height: 48px"></div>
-                        <div class="wave-bar" style="height: 22px"></div>
+            <div class="hero-visual">
+                <img class="hero-robot" src="assets/robot-wave.png" alt="Joice robot companion waving">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="mock-island"></div>
+                        <div class="mock-date">wednesday, 7.2.26</div>
+                        <div class="mock-greeting">Late night thoughts?</div>
+                        <div class="mock-prompt">
+                            <div class="mock-prompt-label">If you need an idea</div>
+                            <div class="mock-prompt-text">What's one thing today you don't want to forget?</div>
+                        </div>
+                        <div class="mock-mic-wrap">
+                            <div class="mock-ring"></div>
+                            <div class="mock-ring"></div>
+                            <div class="mock-mic">
+                                <svg viewBox="0 0 24 24"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.94V22h2v-3.06A8 8 0 0 0 20 11h-2z"/></svg>
+                            </div>
+                        </div>
+                        <div class="mock-hint">Tap to start talking</div>
+                        <div class="mock-wave">
+                            <div class="wave-bar" style="height: 16px"></div>
+                            <div class="wave-bar" style="height: 30px"></div>
+                            <div class="wave-bar" style="height: 22px"></div>
+                            <div class="wave-bar" style="height: 38px"></div>
+                            <div class="wave-bar" style="height: 26px"></div>
+                            <div class="wave-bar" style="height: 40px"></div>
+                            <div class="wave-bar" style="height: 30px"></div>
+                            <div class="wave-bar" style="height: 20px"></div>
+                            <div class="wave-bar" style="height: 34px"></div>
+                            <div class="wave-bar" style="height: 24px"></div>
+                        </div>
+                        <div class="mock-tabbar">
+                            <div class="mock-tab active">Talk</div>
+                            <div class="mock-tab">Journal</div>
+                            <div class="mock-tab">Themes</div>
+                        </div>
                     </div>
-                    <div class="mock-timer">2:34</div>
-                    <div class="mock-end-btn">End</div>
                 </div>
             </div>
         </div>
-    </section>
+    </header>
 
     <!-- Features -->
     <section class="features" id="features">
         <div class="section-inner">
-            <h2>More than a journal.<br>A companion.</h2>
+            <div class="section-head reveal">
+                <span class="eyebrow">What Joice does</span>
+                <h2>More than a journal. A companion.</h2>
+                <p>Everything in Joice is built around one idea: talking things out is the most natural way to understand yourself.</p>
+            </div>
             <div class="feature-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🎙</div>
-                    <h3>Talk, Don't Type</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/robot-notes.png" alt="">
+                    <h3>Talk, don't type</h3>
                     <p>Just speak naturally — like you're talking to a close friend. No blank pages, no writer's block. Joice responds in real time with genuine curiosity.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🧠</div>
-                    <h3>Discover Patterns</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/graph.png" alt="">
+                    <h3>Discover patterns</h3>
                     <p>Joice surfaces recurring themes in your life — career, relationships, stress — so you can see the bigger picture of what's on your mind.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Private & Secure</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/padlock.png" alt="">
+                    <h3>Private &amp; secure</h3>
                     <p>Your journal is yours. Encrypted storage, no data selling, and you can delete everything at any time. Your thoughts stay between you and Joice.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📝</div>
-                    <h3>Automatic Transcripts</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/robot-reading.png" alt="">
+                    <h3>Automatic transcripts</h3>
                     <p>Every conversation is transcribed and searchable. Look back on any entry, see your themes evolve, and track your journey over time.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔥</div>
-                    <h3>Build the Habit</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/calendar.png" alt="">
+                    <h3>Build the habit</h3>
                     <p>Streaks, gentle reminders, and a beautiful calendar of your journaling history. Joice helps you show up for yourself consistently.</p>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">✨</div>
-                    <h3>Weekly Reflections</h3>
+                <div class="feature-card reveal">
+                    <img class="feature-icon" src="assets/robot-progress.png" alt="">
+                    <h3>Weekly reflections</h3>
                     <p>Every week, Joice writes you a warm reflection on what you talked about — patterns you might have missed, growth you might not have noticed.</p>
                 </div>
             </div>
@@ -109,20 +136,24 @@
 
     <!-- How It Works -->
     <section class="how-it-works" id="how-it-works">
+        <img class="how-plant" src="assets/plant-3.png" alt="">
         <div class="section-inner">
-            <h2>How it works</h2>
+            <div class="section-head reveal">
+                <span class="eyebrow">Three small steps</span>
+                <h2>How it works</h2>
+            </div>
             <div class="steps">
-                <div class="step">
+                <div class="step reveal">
                     <div class="step-num">1</div>
-                    <h3>Open Joice & tap talk</h3>
+                    <h3>Open Joice &amp; tap talk</h3>
                     <p>No prompts required. Just start talking about whatever's on your mind — your day, a decision, a feeling, anything.</p>
                 </div>
-                <div class="step">
+                <div class="step reveal">
                     <div class="step-num">2</div>
-                    <h3>Joice listens & responds</h3>
+                    <h3>Joice listens &amp; responds</h3>
                     <p>Like a friend who genuinely cares. Joice asks follow-up questions, notices emotions, and keeps you talking — never gives unsolicited advice.</p>
                 </div>
-                <div class="step">
+                <div class="step reveal">
                     <div class="step-num">3</div>
                     <h3>See your patterns emerge</h3>
                     <p>Over time, Joice surfaces the themes running through your life. Your journal becomes a mirror showing you what matters most.</p>
@@ -133,54 +164,75 @@
 
     <!-- Testimonial -->
     <section class="testimonial-section">
-        <div class="section-inner">
+        <div class="testimonial-card reveal">
+            <span class="testimonial-mark">&ldquo;</span>
             <blockquote>
-                <p>"I've tried every journaling app. Joice is the first one that stuck because I don't have to write — I just talk. It's like having a conversation with someone who actually listens."</p>
+                <p>I've tried every journaling app. Joice is the first one that stuck because I don't have to write — I just talk. It's like having a conversation with someone who actually listens.</p>
             </blockquote>
+            <div class="testimonial-attr">An early Joice member</div>
         </div>
     </section>
 
     <!-- CTA -->
     <section class="cta-section" id="download">
-        <div class="section-inner">
-            <h2>Start journaling<br>by voice today</h2>
+        <img class="cta-robot reveal" src="assets/robot-wave.png" alt="">
+        <div class="section-head reveal">
+            <h2>Start journaling by voice tonight</h2>
             <p>Download Joice and have your first conversation. It takes two minutes to feel the difference.</p>
-            <a href="#" class="btn-primary btn-large">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                Download for iOS
-            </a>
         </div>
+        <a href="#" class="btn-primary btn-large reveal">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            Download for iOS
+        </a>
+        <p class="cta-note">Free to try · No credit card required</p>
     </section>
 
     <!-- Footer -->
     <footer>
         <div class="footer-inner">
-            <div class="footer-brand">
-                <span class="logo">joice</span>
-                <p>Voice journaling with AI</p>
-            </div>
-            <div class="footer-links">
-                <div class="footer-col">
-                    <h4>Product</h4>
-                    <a href="#features">Features</a>
-                    <a href="#how-it-works">How It Works</a>
-                    <a href="#download">Download</a>
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <a href="index.html" class="logo"><img src="assets/joice-icon.png" alt="">joice</a>
+                    <p>A voice journal under a soft sky. Talk it out — Joice listens.</p>
                 </div>
-                <div class="footer-col">
-                    <h4>Legal</h4>
-                    <a href="privacy.html">Privacy Policy</a>
-                    <a href="terms.html">Terms of Service</a>
-                </div>
-                <div class="footer-col">
-                    <h4>Support</h4>
-                    <a href="support.html">Support Center</a>
-                    <a href="mailto:support@joiceapp.com">Contact Us</a>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#how-it-works">How It Works</a>
+                        <a href="#download">Download</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Legal</h4>
+                        <a href="privacy.html">Privacy Policy</a>
+                        <a href="terms.html">Terms of Service</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Support</h4>
+                        <a href="support.html">Support Center</a>
+                        <a href="mailto:support@joiceapp.com">Contact Us</a>
+                    </div>
                 </div>
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2026 Joice. All rights reserved.</p>
+                <p>Made with care, one conversation at a time.</p>
             </div>
         </div>
     </footer>
+
+    <script>
+        const els = document.querySelectorAll('.reveal');
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((e) => {
+                    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.15 });
+            els.forEach((el) => io.observe(el));
+        } else {
+            els.forEach((el) => el.classList.add('visible'));
+        }
+    </script>
 </body>
 </html>
