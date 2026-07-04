@@ -1,39 +1,42 @@
 /* =====================================================
-   Joice Website — "Journal Sky" aesthetic
-   Tokens extracted from the iOS app (JournalTheme.swift):
-   periwinkle sky, cream paper, green ink, sage accents,
-   Lora serif + DM Sans, blue-grey shadows, film grain.
+   Joice Website — production app aesthetic
+   Source of truth: joice/joice/Design (JournalTheme.swift,
+   AuthComponents.swift, CustomTabBar.swift) and the app
+   asset catalog: periwinkle skies, frosted glass capsules,
+   watercolor botanicals, Lora + DM Sans lowercase voice,
+   blue-grey shadows, film grain.
    ===================================================== */
 
 :root {
-    /* Sky (night / talk screen) */
+    /* Sky — night / dusk (JournalPalette night, TalkPalette) */
     --sky-top: #52618F;
     --sky-mid: #66749D;
     --sky-low: #9BA9C7;
-    /* Sky (day) */
+    /* Sky — auth flow overlay (AuthPalette.skyTop) */
+    --auth-top: #3D5483;
+    /* Sky — day (JournalPalette day) */
     --day-top: #D6DAE7;
     --day-mid: #EAE9E8;
     /* Paper */
     --warm-white: #FEFBF7;
     --cream: #FFFEF7;
     --cream-deep: #FFFDF0;
-    /* Ink */
+    /* Ink — deep teal-green, light sage at night */
     --ink: #3E5651;
     --ink-soft: rgba(62, 86, 81, 0.62);
+    --ink-night: #E6ECE9;
     --fern: #4C6140;
+    --fern-night: #D9E2CF;
     --fern-muted: #809773;
+    --fern-muted-night: #B4C4A8;
     --sage: #A8B3A1;
     --pill-tint: #F2F4EA;
-    --pill-entries: #EDF0E1;
-    /* Shadow — the app tints every shadow blue-grey, never black */
+    /* Every shadow is tinted blue-grey, never black (shadowTint #97A6C5) */
     --shadow-tint: 151, 166, 197;
-    /* Legacy brand CTA gradient (still live on PrimaryButton) */
-    --terracotta: #C17F59;
-    --amber: #A67C52;
-    /* Shape */
+    /* Glass shadow from the auth flow (#CED6D8 @ 32%) */
+    --glass-shadow: rgba(206, 214, 216, 0.4);
+    /* Shape — the app is capsules and soft 12–16pt corners */
     --radius-card: 16px;
-    --radius-btn: 14px;
-    --radius-xl: 24px;
     --max-width: 1120px;
     /* Type */
     --serif: 'Lora', Georgia, serif;
@@ -55,7 +58,7 @@ body {
 
 ::selection { background: rgba(168, 179, 161, 0.45); color: var(--fern); }
 
-/* Paper grain over everything, like the app's GrainOverlay */
+/* Paper grain over everything, like the app's grain overlay */
 body::after {
     content: "";
     position: fixed;
@@ -72,12 +75,15 @@ img { max-width: 100%; height: auto; }
    Shared bits
    ===================================================== */
 
+/* Serif section label, lowercase — OnboardingHowItWorks sectionLabel
+   (Lora-Medium 14, kerning 0.42) */
 .eyebrow {
     display: inline-block;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
     color: var(--fern-muted);
     margin-bottom: 18px;
 }
@@ -87,63 +93,75 @@ img { max-width: 100%; height: auto; }
     margin: 0 auto;
 }
 
+/* The app lowercases its serif voice everywhere:
+   "welcome back", "need some inspiration?" */
 h1, h2, .serif {
     font-family: var(--serif);
     font-weight: 500;
+    text-transform: lowercase;
     color: var(--fern);
 }
 
-/* Buttons — app PrimaryButton: 52pt tall, radius 14, terracotta→amber
-   gradient, soft warm shadow, presses to 0.97 */
+/* Buttons — AuthGlassButton: frosted white capsule, ink label,
+   DM Sans with gentle kerning, cool glass shadow */
 .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: linear-gradient(135deg, var(--terracotta), var(--amber));
-    color: #FFFDF0;
+    background: linear-gradient(135deg, #FFFFFF, rgba(255, 255, 255, 0.7));
+    color: var(--ink);
     min-height: 52px;
-    padding: 13px 30px;
-    border-radius: var(--radius-btn);
+    padding: 13px 32px;
+    border-radius: 999px;
     text-decoration: none;
-    font-weight: 600;
-    font-size: 16px;
-    letter-spacing: 0.01em;
-    border: none;
+    font-weight: 500;
+    font-size: 16.5px;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    border: 0.5px solid rgba(255, 255, 255, 0.6);
     cursor: pointer;
     box-shadow:
-        0 4px 12px rgba(193, 127, 89, 0.30),
-        0 12px 32px rgba(var(--shadow-tint), 0.25);
+        0 4px 14px var(--glass-shadow),
+        0 10px 30px rgba(var(--shadow-tint), 0.28);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow:
-        0 6px 16px rgba(193, 127, 89, 0.38),
-        0 18px 44px rgba(var(--shadow-tint), 0.3);
+        0 6px 18px var(--glass-shadow),
+        0 16px 40px rgba(var(--shadow-tint), 0.34);
 }
 
 .btn-primary:active { transform: scale(0.97); }
 
-.btn-large { min-height: 58px; padding: 15px 38px; font-size: 17px; }
+.btn-large { min-height: 58px; padding: 15px 40px; font-size: 17.5px; }
 
+/* Dim glass — the non-prominent AuthGlassButton */
 .btn-ghost {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--fern);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
+    color: var(--ink);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 15px;
-    padding: 13px 24px;
+    font-weight: 500;
+    font-size: 15.5px;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    padding: 13px 26px;
     min-height: 52px;
-    border-radius: var(--radius-btn);
-    border: 1.5px solid rgba(76, 97, 64, 0.28);
-    transition: border-color 0.2s, background 0.2s;
+    border-radius: 999px;
+    border: 0.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(var(--shadow-tint), 0.18);
+    transition: background 0.2s, border-color 0.2s;
 }
 
-.btn-ghost:hover { border-color: var(--fern-muted); background: rgba(242, 244, 234, 0.6); }
+.btn-ghost:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.46));
+    border-color: rgba(255, 255, 255, 0.7);
+}
 
 /* Capsule pill, like the app's date / entry-count pills */
 .pill {
@@ -214,6 +232,8 @@ nav {
     color: var(--ink);
     font-size: 14.5px;
     font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
     transition: color 0.2s;
 }
 
@@ -232,17 +252,21 @@ nav {
 .btn-nav:hover { background: #5a7350 !important; color: var(--cream-deep) !important; transform: translateY(-1px); }
 
 /* =====================================================
-   Hero — twilight sky, clouds, robot, phone
+   Hero — the auth-flow sky: leaf shadows under a
+   periwinkle gradient (AuthSkyBackground)
    ===================================================== */
 
 .hero {
     position: relative;
-    background: linear-gradient(180deg,
-        var(--sky-top) 0%,
-        var(--sky-mid) 46%,
-        var(--sky-low) 78%,
-        var(--warm-white) 100%);
-    padding: 148px 24px 40px;
+    background:
+        /* bottom fade into warm white */
+        linear-gradient(180deg, rgba(254, 251, 247, 0) 72%, var(--warm-white) 100%),
+        /* periwinkle wash over the photo */
+        linear-gradient(180deg, rgba(61, 84, 131, 0.72) 0%, rgba(151, 166, 197, 0.74) 100%),
+        /* pressed-leaf shadow photo from the app's auth flow */
+        url("assets/auth-sky.png") center / cover no-repeat,
+        var(--sky-low);
+    padding: 150px 24px 48px;
     overflow: hidden;
 }
 
@@ -253,7 +277,7 @@ nav {
     position: absolute;
     border-radius: 50%;
     filter: blur(60px);
-    background: rgba(255, 254, 247, 0.16);
+    background: rgba(255, 254, 247, 0.14);
     pointer-events: none;
 }
 
@@ -274,17 +298,6 @@ nav {
     to   { transform: translateX(90px) translateY(24px); }
 }
 
-.hero-cloud {
-    position: absolute;
-    pointer-events: none;
-    opacity: 0.85;
-    animation: drift 38s ease-in-out infinite alternate;
-}
-
-.hero-cloud-1 { width: 170px; top: 64px; left: 24%; opacity: 0.65; }
-.hero-cloud-2 { width: 140px; top: 84px; right: 10%; animation-duration: 30s; animation-direction: alternate-reverse; }
-.hero-cloud-3 { width: 110px; top: 380px; left: 42%; opacity: 0.5; animation-duration: 44s; }
-
 .hero-grid {
     position: relative;
     max-width: var(--max-width);
@@ -296,6 +309,7 @@ nav {
     z-index: 2;
 }
 
+/* glass capsule badge, like the app's frosted pills */
 .hero-badge {
     display: inline-flex;
     align-items: center;
@@ -305,10 +319,10 @@ nav {
     color: var(--cream-deep);
     padding: 7px 18px;
     border-radius: 999px;
-    font-size: 12.5px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
     margin-bottom: 28px;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -317,7 +331,7 @@ nav {
 .hero h1 {
     font-size: clamp(42px, 5.4vw, 62px);
     line-height: 1.12;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
     color: var(--cream);
     margin-bottom: 22px;
     text-wrap: balance;
@@ -344,13 +358,6 @@ nav {
     margin-bottom: 16px;
 }
 
-.hero .btn-ghost {
-    color: var(--cream-deep);
-    border-color: rgba(255, 253, 240, 0.4);
-}
-
-.hero .btn-ghost:hover { background: rgba(255, 253, 240, 0.12); border-color: rgba(255, 253, 240, 0.7); }
-
 .hero-note {
     font-size: 13.5px;
     color: rgba(255, 254, 247, 0.92);
@@ -374,32 +381,43 @@ nav {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Hero visual: waving robot beside the phone */
+/* Hero visual: the phone with a watercolor sprig tucked behind it */
 .hero-visual {
     position: relative;
     display: flex;
     justify-content: center;
-    align-items: flex-end;
+    align-items: center;
     opacity: 0;
     animation: rise 1s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
 }
 
-.hero-robot {
-    width: 190px;
-    margin-right: -34px;
-    margin-bottom: 36px;
-    z-index: 3;
-    filter: drop-shadow(0 18px 30px rgba(45, 55, 90, 0.35));
-    animation: bob 5s ease-in-out infinite;
+.hero-sprig {
+    position: absolute;
+    width: 230px;
+    left: 50%;
+    margin-left: -290px;
+    bottom: -26px;
+    z-index: 1;
+    transform: rotate(16deg) scaleX(-1);
+    filter: drop-shadow(0 14px 24px rgba(45, 55, 90, 0.28));
+    animation: sway-sprig 7s ease-in-out infinite;
 }
 
-@keyframes bob {
-    0%, 100% { transform: translateY(0) rotate(-2deg); }
-    50% { transform: translateY(-12px) rotate(1.5deg); }
+@keyframes sway-sprig {
+    0%, 100% { transform: rotate(16deg) scaleX(-1); }
+    50% { transform: rotate(11deg) scaleX(-1) translateY(-6px); }
+}
+
+/* gentle bob for the CTA flower */
+@keyframes sway {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-5deg) translateY(-6px); }
 }
 
 /* =====================================================
-   Phone mockup — the live Talk screen
+   Phone mockup — the production Talk screen
+   (HomeView idleLayer: greeting, leaf call button,
+   capture toggle, prompt ideas, glass tab bar)
    ===================================================== */
 
 .phone-mockup {
@@ -415,20 +433,20 @@ nav {
 }
 
 .phone-screen {
-    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
     border-radius: 34px;
-    padding: 54px 20px 18px;
+    padding: 52px 18px 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
     overflow: hidden;
     position: relative;
-    min-height: 560px;
+    min-height: 596px;
 }
 
 .mock-island {
     position: absolute;
-    top: 16px;
+    top: 14px;
     left: 50%;
     transform: translateX(-50%);
     width: 88px;
@@ -437,82 +455,38 @@ nav {
     border-radius: 999px;
 }
 
-.mock-date {
-    font-size: 11px;
+.mock-streak {
+    position: absolute;
+    top: 52px;
+    right: 20px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    color: rgba(255, 253, 240, 0.75);
-    margin-bottom: 10px;
+    color: var(--fern-night);
 }
 
 .mock-greeting {
     font-family: var(--serif);
-    font-size: 23px;
-    color: var(--cream-deep);
+    font-size: 24px;
+    letter-spacing: 0.03em;
+    color: var(--fern-night);
     text-align: center;
     line-height: 1.3;
-    margin-bottom: 22px;
+    margin: 14px 0 6px;
 }
 
-/* prompt idea card — cream @80%, dashed sage border like the app */
-.mock-prompt {
-    width: 100%;
-    background: rgba(255, 253, 240, 0.82);
-    border: 1.5px dashed var(--sage);
-    border-radius: var(--radius-card);
-    padding: 14px 16px;
-    margin-bottom: 26px;
+.mock-prompt-line {
+    font-size: 13.5px;
+    letter-spacing: 0.03em;
+    color: var(--fern-night);
+    margin-bottom: 10px;
 }
 
-.mock-prompt-label {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--fern-muted);
-    margin-bottom: 4px;
-}
-
-.mock-prompt-text {
-    font-size: 13px;
-    color: var(--ink);
-    line-height: 1.45;
-}
-
-/* breathing mic button with expanding rings */
-.mock-mic-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 8px 0 14px;
-}
-
-.mock-ring {
-    position: absolute;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 253, 240, 0.4);
-    width: 96px;
-    height: 96px;
-    animation: ring 3.2s ease-out infinite;
-}
-
-.mock-ring:nth-child(2) { animation-delay: 1.6s; }
-
-@keyframes ring {
-    from { transform: scale(1); opacity: 0.7; }
-    to   { transform: scale(1.9); opacity: 0; }
-}
-
-.mock-mic {
-    width: 92px;
-    height: 92px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%, #5a7350, var(--fern) 70%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 12px 32px rgba(45, 55, 90, 0.45);
+/* the leaf IS the call button — it breathes */
+.mock-leaf {
+    width: 118px;
+    height: auto;
+    margin: 4px 0 6px;
+    filter: drop-shadow(0 10px 22px rgba(45, 55, 90, 0.35));
     animation: breathe 2.4s ease-in-out infinite;
 }
 
@@ -521,68 +495,126 @@ nav {
     50% { transform: scale(1.05); }
 }
 
-.mock-mic svg { width: 34px; height: 34px; fill: var(--cream-deep); }
-
-.mock-hint {
-    font-size: 12.5px;
-    color: rgba(255, 253, 240, 0.85);
-    margin-bottom: auto;
+.mock-instruction {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--fern-night);
+    margin-bottom: 12px;
 }
 
-/* wave bars in sage */
-.mock-wave {
+/* CaptureModeToggle — glass capsule, cream selected segment */
+.mock-toggle {
     display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    box-shadow: 0 4px 10px rgba(45, 55, 90, 0.15);
+    margin-bottom: 18px;
+}
+
+.mock-seg {
+    display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin: 18px 0;
-    height: 40px;
-}
-
-.wave-bar {
-    width: 4px;
-    border-radius: 2px;
-    background: rgba(255, 253, 240, 0.85);
-    animation: wave 1.5s ease-in-out infinite;
-}
-
-.wave-bar:nth-child(2)  { animation-delay: 0.1s; }
-.wave-bar:nth-child(3)  { animation-delay: 0.2s; }
-.wave-bar:nth-child(4)  { animation-delay: 0.3s; }
-.wave-bar:nth-child(5)  { animation-delay: 0.4s; }
-.wave-bar:nth-child(6)  { animation-delay: 0.5s; }
-.wave-bar:nth-child(7)  { animation-delay: 0.6s; }
-.wave-bar:nth-child(8)  { animation-delay: 0.7s; }
-.wave-bar:nth-child(9)  { animation-delay: 0.8s; }
-.wave-bar:nth-child(10) { animation-delay: 0.9s; }
-
-@keyframes wave {
-    0%, 100% { transform: scaleY(0.45); opacity: 0.5; }
-    50% { transform: scaleY(1); opacity: 0.95; }
-}
-
-/* cream capsule tab bar, like the app's custom 3-tab bar */
-.mock-tabbar {
-    width: 100%;
-    background: var(--cream-deep);
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--fern-muted-night);
+    padding: 5px 12px;
     border-radius: 999px;
-    padding: 9px 20px;
+}
+
+.mock-seg svg { width: 11px; height: 11px; }
+
+.mock-seg.active {
+    background: rgba(255, 254, 247, 0.92);
+    color: var(--fern);
+    box-shadow: 0 2px 6px rgba(45, 55, 90, 0.12);
+}
+
+.mock-inspo-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--fern-night);
+    margin-bottom: 8px;
+}
+
+/* PromptIdeaCard — cream card, dashed sage border */
+.mock-idea {
+    width: 100%;
+    background: rgba(255, 253, 240, 0.82);
+    border: 1.5px dashed var(--sage);
+    border-radius: var(--radius-card);
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.mock-idea-title {
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin-bottom: 3px;
+}
+
+.mock-idea-sub {
+    font-size: 10.5px;
+    font-weight: 300;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    line-height: 1.45;
+}
+
+/* GlassTabBar — frosted capsule: talk · journal · themes · you */
+.mock-tabbar {
+    width: 244px;
+    margin-top: auto;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.56));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    padding: 9px 22px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     box-shadow: 0 8px 24px rgba(45, 55, 90, 0.28);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .mock-tab {
-    font-size: 10.5px;
-    font-weight: 600;
-    color: var(--fern-muted);
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--sage);
+    width: 40px;
 }
 
-.mock-tab.active {
-    color: var(--fern);
-    background: var(--pill-tint);
-    padding: 2px 14px;
-    border-radius: 999px;
+.mock-tab svg,
+.mock-tab img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.mock-tab.active { color: var(--fern); }
+
+/* the "you" tab: soft sage orb instead of a glyph */
+.mock-orb {
+    width: 16px;
+    height: 16px;
+    margin: 1px 0;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        rgba(168, 179, 161, 0.4) 0%,
+        var(--sage) 70%,
+        rgba(168, 179, 161, 0) 100%);
+    opacity: 0.6;
 }
 
 /* =====================================================
@@ -598,7 +630,8 @@ nav {
 .reveal.visible { opacity: 1; transform: translateY(0); }
 
 /* =====================================================
-   Features — cream paper cards with app illustrations
+   Features — cream paper cards, a watercolor plant each
+   (like the app's journal entry cards)
    ===================================================== */
 
 .features {
@@ -619,7 +652,7 @@ nav {
 .cta-section h2 {
     font-size: clamp(32px, 4vw, 44px);
     line-height: 1.15;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
     margin-bottom: 16px;
     text-wrap: balance;
 }
@@ -657,17 +690,17 @@ nav {
 }
 
 .feature-icon {
-    width: 60px;
-    height: 60px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
-    margin-bottom: 18px;
-    filter: drop-shadow(0 4px 10px rgba(var(--shadow-tint), 0.3));
+    margin-bottom: 16px;
 }
 
 .feature-card h3 {
     font-size: 19px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
     margin-bottom: 8px;
     color: var(--fern);
 }
@@ -679,7 +712,7 @@ nav {
 }
 
 /* =====================================================
-   How it works — journal-page steps
+   How it works — dashed prompt-card steps
    ===================================================== */
 
 .how-it-works {
@@ -693,10 +726,10 @@ nav {
 
 .how-plant {
     position: absolute;
-    width: 200px;
+    width: 210px;
     right: 3%;
-    bottom: -20px;
-    opacity: 0.8;
+    bottom: -12px;
+    opacity: 0.85;
     pointer-events: none;
 }
 
@@ -704,7 +737,6 @@ nav {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 26px;
-    counter-reset: step;
 }
 
 .step {
@@ -732,7 +764,9 @@ nav {
 
 .step h3 {
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
     margin-bottom: 8px;
     color: var(--fern);
 }
@@ -754,7 +788,7 @@ nav {
     max-width: 860px;
     margin: 0 auto;
     background: linear-gradient(180deg, var(--sky-top), var(--sky-mid));
-    border-radius: var(--radius-xl);
+    border-radius: 24px;
     padding: 72px 56px 64px;
     text-align: center;
     overflow: hidden;
@@ -795,15 +829,15 @@ nav {
 }
 
 .testimonial-attr {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(255, 253, 240, 0.65);
+    font-family: var(--serif);
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    color: rgba(255, 253, 240, 0.7);
 }
 
 /* =====================================================
-   CTA — dusk returns
+   CTA — dusk returns, a single watercolor flower
    ===================================================== */
 
 .cta-section {
@@ -818,11 +852,11 @@ nav {
     overflow: hidden;
 }
 
-.cta-robot {
-    width: 130px;
-    margin: 0 auto 8px;
-    animation: bob 5s ease-in-out infinite;
-    filter: drop-shadow(0 14px 26px rgba(45, 55, 90, 0.3));
+.cta-flower {
+    width: 150px;
+    margin: 0 auto 4px;
+    filter: drop-shadow(0 14px 26px rgba(45, 55, 90, 0.25));
+    animation: sway 7s ease-in-out infinite;
 }
 
 .cta-section .section-head { margin-bottom: 36px; }
@@ -881,11 +915,12 @@ footer {
 }
 
 .footer-col h4 {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: rgba(220, 229, 211, 0.75);
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 500;
+    text-transform: lowercase;
+    letter-spacing: 0.06em;
+    color: rgba(220, 229, 211, 0.85);
     margin-bottom: 16px;
 }
 
@@ -995,7 +1030,7 @@ footer {
     position: relative;
     overflow: hidden;
     padding: 56px 52px;
-    border-radius: var(--radius-xl);
+    border-radius: 24px;
     background: linear-gradient(180deg, var(--day-top) 0%, var(--day-mid) 55%, var(--warm-white) 100%);
     border: 1px solid rgba(var(--shadow-tint), 0.22);
     box-shadow:
@@ -1019,10 +1054,11 @@ footer {
 
 .support-kicker {
     display: inline-block;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
     color: var(--fern-muted);
     margin-bottom: 18px;
 }
@@ -1054,6 +1090,12 @@ footer {
     flex-wrap: wrap;
     position: relative;
     z-index: 1;
+}
+
+/* On the day-sky support hero the glass button needs a touch more body */
+.support-hero .btn-primary {
+    text-transform: none;
+    border-color: rgba(255, 255, 255, 0.9);
 }
 
 .support-secondary-link {
@@ -1163,7 +1205,7 @@ footer {
     .hero-sub { margin-left: auto; margin-right: auto; }
     .hero-cta { justify-content: center; }
     .hero-visual { margin-top: 24px; }
-    .hero-robot { width: 150px; margin-right: -26px; }
+    .hero-sprig { width: 170px; right: 8%; }
     .feature-grid { grid-template-columns: repeat(2, 1fr); }
     .steps { grid-template-columns: 1fr; }
     .footer-top { grid-template-columns: 1fr; gap: 36px; }
@@ -1175,10 +1217,10 @@ footer {
     .support-grid, .faq-grid { grid-template-columns: 1fr; }
     .support-hero { padding: 36px 26px; }
     .testimonial-card { padding: 52px 28px 46px; }
-    .phone-mockup { width: 240px; }
-    .phone-screen { min-height: 480px; padding: 48px 16px 16px; }
-    .hero-robot { width: 104px; margin-right: -18px; margin-bottom: 24px; }
-    .hero-cloud-3 { display: none; }
+    .phone-mockup { width: 258px; }
+    .phone-screen { min-height: 540px; padding: 46px 14px 12px; }
+    .mock-tabbar { width: 216px; }
+    .hero-sprig { display: none; }
     .how-plant { display: none; }
     .footer-links { grid-template-columns: 1fr; gap: 26px; }
     .footer-col a { overflow-wrap: anywhere; }
