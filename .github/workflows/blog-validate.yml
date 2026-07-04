@@ -1,0 +1,34 @@
+name: Validate blog build
+
+on:
+  pull_request:
+    paths:
+      - "posts/**"
+      - "blog/**"
+      - "pipeline/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install PyYAML Markdown
+
+      - name: Rebuild blog
+        run: python3 pipeline/build_blog.py
+
+      - name: Check generated output is in sync with posts/
+        run: |
+          if ! git diff --exit-code -- blog/ sitemap.xml robots.txt llms.txt; then
+            echo "::error::Generated blog output is out of sync. Run 'python3 pipeline/build_blog.py' and commit."
+            exit 1
+          fi

@@ -1,0 +1,35 @@
+# Blog pipeline configuration
+site_url: "https://joiceapp.com"
+site_name: "Joice"
+blog_title: "the joice journal"
+blog_description: "Essays on journaling, mental health, and finding your way — from the makers of Joice, the voice journal that talks back."
+
+# TODO: replace with the real App Store URL once the app is live.
+# Every post links here 1-2 times; the site's download section is the
+# working stand-in until then.
+app_store_url: "https://joiceapp.com/#download"
+
+# Brand context given to the writer model
+brand_blurb: >
+  Joice is an iOS voice-journaling app. You talk out loud about whatever is on
+  your mind and an AI companion listens like a friend — asking gentle follow-up
+  questions, never giving unsolicited advice. Entries are transcribed and
+  searchable, recurring life themes are surfaced over time, and each week Joice
+  writes you a warm reflection on what you talked about. It is private and
+  encrypted, free to try, and aimed at people who find blank pages hard but
+  talking easy.
+
+# Content pillars the topic picker draws from
+pillars:
+  - journaling techniques, habits, and the science behind them
+  - mental health and emotional wellbeing for everyday life (not clinical advice)
+  - growing up on the internet — identity, comparison, attention, loneliness
+  - finding your way through life — purpose, self-discovery, quarter-life questions
+  - navigating life decisions — careers, relationships, moving, big choices
+  - self-awareness, reflection, and talking things out
+
+# Generation limits
+min_sources: 3
+max_sources: 8
+min_words: 900
+max_words: 1600
