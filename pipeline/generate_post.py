@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate one blog post for joiceapp.com.
+"""Generate one blog post for joiceapp.com and upload it to Supabase.
 
 Three-phase pipeline against the Claude API:
   1. research — pick a fresh topic (or use --topic) and gather real sources
@@ -9,24 +9,28 @@ Three-phase pipeline against the Claude API:
   3. polish   — an editor pass that hunts AI tells, verifies citation use,
      and enforces the 1-2 Joice plugs
 
-Output: a markdown file with YAML frontmatter in posts/, ready for
-build_blog.py. Exits non-zero if validation fails, so the CI job never opens
-a PR with a bad post.
+Delivery: the finished post is INSERTed into the Supabase `posts` table as a
+draft. A human reviews it in the Supabase Table Editor and flips `status` to
+'published' — the website renders straight from the table, so publishing is
+instant and needs no deploy.
+
+Environment:
+  ANTHROPIC_API_KEY      Claude API key
+  SUPABASE_SECRET_KEY    Supabase secret (service) key — write access
 """
 
 import argparse
-import datetime
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
 import anthropic
+import requests
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
 PIPELINE_DIR = Path(__file__).resolve().parent
-POSTS_DIR = ROOT / "posts"
 
 MODEL = "claude-opus-4-8"
 
@@ -66,19 +70,64 @@ def load_style_guide():
     return (PIPELINE_DIR / "style_guide.md").read_text()
 
 
-def existing_posts():
-    """Frontmatter of already-published posts, for topic dedupe."""
-    posts = []
-    for path in sorted(POSTS_DIR.glob("*.md")):
-        text = path.read_text()
-        match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
-        if match:
-            try:
-                posts.append(yaml.safe_load(match.group(1)))
-            except yaml.YAMLError:
-                continue
-    return posts
+# ------------------------------------------------------------- supabase i/o
 
+def supabase_headers(cfg):
+    key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not key:
+        sys.exit("SUPABASE_SECRET_KEY is not set")
+    return {
+        "apikey": key,
+        "Authorization": "Bearer " + key,
+        "Content-Type": "application/json",
+    }
+
+
+def existing_posts(cfg):
+    """All posts (drafts included) for topic dedupe + slug uniqueness."""
+    if not os.environ.get("SUPABASE_SECRET_KEY"):
+        print("warning: SUPABASE_SECRET_KEY unset; skipping topic dedupe",
+              file=sys.stderr)
+        return []
+    r = requests.get(
+        cfg["supabase_url"] + "/rest/v1/posts",
+        params={"select": "slug,title,tags"},
+        headers=supabase_headers(cfg),
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def unique_slug(slug, taken):
+    candidate, n = slug, 2
+    while candidate in taken:
+        candidate = "{}-{}".format(slug, n)
+        n += 1
+    return candidate
+
+
+def insert_draft(cfg, post, taken_slugs):
+    row = {
+        "slug": unique_slug(post["slug"], taken_slugs),
+        "title": post["title"],
+        "description": post["description"],
+        "body_md": post["body_markdown"].strip(),
+        "tags": post["tags"],
+        "sources": post["sources"],
+        "status": "draft",
+    }
+    r = requests.post(
+        cfg["supabase_url"] + "/rest/v1/posts",
+        headers={**supabase_headers(cfg), "Prefer": "return=representation"},
+        json=row,
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()[0]
+
+
+# ------------------------------------------------------------- generation
 
 def collect_text(message):
     return "\n".join(b.text for b in message.content if b.type == "text")
@@ -91,9 +140,9 @@ def stream_message(client, **kwargs):
 
 def run_research(client, cfg, topic_override):
     """Web-search research pass. Returns a research brief (markdown/text)."""
-    existing = existing_posts()
+    existing = existing_posts(cfg)
     covered = "\n".join(
-        "- {} (tags: {})".format(p.get("title", "?"), ", ".join(p.get("tags", [])))
+        "- {} (tags: {})".format(p.get("title", "?"), ", ".join(p.get("tags") or []))
         for p in existing
     ) or "- (none yet — this is the first post)"
 
@@ -252,36 +301,12 @@ def validate(post, cfg):
     return problems
 
 
-def unique_slug(slug):
-    candidate, n = slug, 2
-    while (POSTS_DIR / (candidate + ".md")).exists():
-        candidate = "{}-{}".format(slug, n)
-        n += 1
-    return candidate
-
-
-def write_post(post, cfg):
-    POSTS_DIR.mkdir(exist_ok=True)
-    slug = unique_slug(post["slug"])
-    frontmatter = {
-        "title": post["title"],
-        "slug": slug,
-        "date": datetime.date.today().isoformat(),
-        "description": post["description"],
-        "tags": post["tags"],
-        "sources": post["sources"],
-    }
-    path = POSTS_DIR / (slug + ".md")
-    path.write_text("---\n{}---\n\n{}\n".format(
-        yaml.safe_dump(frontmatter, sort_keys=False, allow_unicode=True,
-                       default_flow_style=False),
-        post["body_markdown"].strip()))
-    return path
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--topic", help="Override automatic topic selection")
+    parser.add_argument("--dry-run", metavar="OUT.json",
+                        help="Write the finished post to a JSON file instead "
+                             "of uploading it to Supabase")
     args = parser.parse_args()
 
     cfg = load_config()
@@ -314,10 +339,37 @@ def main():
             print("  - " + p, file=sys.stderr)
         sys.exit(1)
 
-    path = write_post(post, cfg)
-    print("wrote {}".format(path))
-    print("title: {}".format(post["title"]))
-    print("description: {}".format(post["description"]))
+    if args.dry_run:
+        with open(args.dry_run, "w") as f:
+            json.dump(post, f, indent=2, ensure_ascii=False)
+        print("dry run: wrote {} (not uploaded)".format(args.dry_run))
+        print("title: {}".format(post["title"]))
+        return
+
+    taken = {p["slug"] for p in existing_posts(cfg)}
+    row = insert_draft(cfg, post, taken)
+    print("uploaded draft '{}' (slug: {})".format(row["title"], row["slug"]))
+    print("review + publish: flip status to 'published' in the Supabase Table "
+          "Editor and it is live immediately.")
+
+    # surface details in the GitHub Actions job summary, if running in CI
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a") as f:
+            f.write(
+                "## Draft ready for review\n\n"
+                "**{title}**\n\n{desc}\n\n"
+                "- slug: `{slug}`\n"
+                "- tags: {tags}\n"
+                "- sources: {nsources}\n\n"
+                "Review it in the [Supabase Table Editor]"
+                "(https://supabase.com/dashboard/project/{ref}/editor) and set "
+                "`status` to `published` to make it live at "
+                "{site}/blog/{slug}/\n".format(
+                    title=row["title"], desc=row["description"], slug=row["slug"],
+                    tags=", ".join(post["tags"]), nsources=len(post["sources"]),
+                    ref=cfg["supabase_url"].split("//")[1].split(".")[0],
+                    site=cfg["site_url"]))
 
 
 if __name__ == "__main__":
