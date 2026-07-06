@@ -57,9 +57,6 @@ async function renderPost(slug) {
   const url = `${SITE}/blog/${post.slug}/`;
   const minutes = readingMinutes(post.body_md);
   const sources = post.sources || [];
-  const tags = (post.tags || []).map((t) =>
-    `                    <a class="pill blog-tag" href="/blog/?tag=${encodeURIComponent(t)}">${esc(t)}</a>`
-  ).join("\n");
   const sourceItems = sources.map((s) =>
     `                    <li><a href="${esc(s.url)}" rel="nofollow noopener">${esc(s.title)}</a><span class="blog-source-pub"> — ${esc(s.publisher || "")}</span></li>`
   ).join("\n");
@@ -99,9 +96,12 @@ ${sourceItems}
       { "@type": "ListItem", position: 3, name: post.title, item: url },
     ],
   };
+  // Tags are intentionally not rendered visibly on the page; they reach
+  // search engines through these meta tags and the JSON-LD keywords field.
   const articleMeta = [
     '    <meta property="og:type" content="article">',
     `    <meta property="article:published_time" content="${isoDate(post.published_at)}">`,
+    `    <meta name="keywords" content="${esc((post.tags || []).join(", "))}">`,
     ...(post.tags || []).map((t) =>
       `    <meta property="article:tag" content="${esc(t)}">`),
   ].join("\n") + "\n";
@@ -141,9 +141,6 @@ ${NAV}
                 </div>
                 <h1>${esc(post.title)}</h1>
                 <p class="blog-post-desc">${esc(post.description)}</p>
-                <div class="blog-post-tags">
-${tags}
-                </div>
             </header>
 
             <div class="blog-post-body">
