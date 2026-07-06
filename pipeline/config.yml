@@ -1,13 +1,16 @@
 # Blog pipeline configuration
 site_url: "https://joiceapp.com"
 site_name: "Joice"
+
+# Posts are stored in the "Joice Website" Supabase project. The generator
+# writes drafts with SUPABASE_SECRET_KEY (env); the site reads published rows
+# with the publishable key (see functions-lib/blog.js).
+supabase_url: "https://hfcykydchzwfgotnztsb.supabase.co"
 blog_title: "the joice journal"
 blog_description: "Essays on journaling, mental health, and finding your way — from the makers of Joice, the voice journal that talks back."
 
-# TODO: replace with the real App Store URL once the app is live.
-# Every post links here 1-2 times; the site's download section is the
-# working stand-in until then.
-app_store_url: "https://joiceapp.com/#download"
+# Every post links here 1-2 times.
+app_store_url: "https://apps.apple.com/us/app/joice-journal-by-conversation/id6759027458"
 
 # Brand context given to the writer model
 brand_blurb: >

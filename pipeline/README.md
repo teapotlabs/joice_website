@@ -1,9 +1,10 @@
 # Joice blog pipeline
 
 Automated blog generation for joiceapp.com. Twice a day a GitHub Actions cron
-job researches a topic, writes an essay with real citations, renders the site,
-and opens a pull request. **Merging the PR is the human review gate** — once it
-lands on `main`, Cloudflare Pages deploys it.
+job researches a topic, writes an essay with real citations, and uploads it to
+**Supabase as a draft**. A human reviews the draft in the Supabase Table
+Editor and flips `status` to `published` — the website renders posts straight
+from the database, so publishing is **instant and requires no deploy or PR**.
 
 ```
                     ┌────────────────────────────────────────────┐
@@ -11,70 +12,71 @@ lands on `main`, Cloudflare Pages deploys it.
                     │  1. research (Claude + web search)         │
                     │  2. draft (style guide, inline citations)  │
                     │  3. polish (AI-tell hunt, plug check)      │
-                    │  -> posts/<slug>.md                        │
+                    │  -> INSERT into Supabase posts (draft)     │
                     └────────────────┬───────────────────────────┘
                                      ▼
-                    ┌────────────────────────────────────────────┐
-                    │ build_blog.py                              │
-                    │  posts/*.md -> blog/<slug>/index.html,     │
-                    │  blog/index.html (timeline + search),      │
-                    │  posts.json, feed.xml, sitemap.xml,        │
-                    │  robots.txt, llms.txt                      │
-                    └────────────────┬───────────────────────────┘
+              human review in Supabase Table Editor
+                 (edit body_md, flip status -> published)
                                      ▼
-                       PR opened ──▶ human review ──▶ merge
-                                     ▼
-                          Cloudflare Pages deploys main
+        Cloudflare Pages Functions render /blog/* from Supabase
+              on request — the post is live immediately
 ```
+
+## Where things live
+
+| piece | location |
+|---|---|
+| posts (content) | Supabase project "Joice Website" (`hfcykydchzwfgotnztsb`), table `public.posts` |
+| website rendering | `functions/blog/[[path]].js`, `functions/sitemap.xml.js`, `functions/llms.txt.js` + shared `functions-lib/blog.js` (Cloudflare Pages Functions, deployed with the site) |
+| generator | `pipeline/generate_post.py` (GitHub Actions cron, `.github/workflows/blog-generate.yml`) |
+| writer voice | `pipeline/style_guide.md` |
+| topic pillars + limits | `pipeline/config.yml` |
+
+The Pages Functions read with the *publishable* key (safe to embed; row-level
+security exposes only `status = 'published'` rows). The generator writes with
+the *secret* key, which lives only in GitHub Actions secrets.
 
 ## One-time setup
 
-1. **Repo secret** — add `ANTHROPIC_API_KEY` under Settings → Secrets and
-   variables → Actions. The generator uses `claude-opus-4-8`.
-2. **Allow Actions to open PRs** — Settings → Actions → General → Workflow
-   permissions: check "Allow GitHub Actions to create and approve pull
-   requests" (and "Read and write permissions").
-3. **App Store URL** — `pipeline/config.yml` currently points the in-post app
-   plug at `https://joiceapp.com/#download`. Replace `app_store_url` with the
-   real App Store link when the app is live.
+1. **Repo secrets** — Settings → Secrets and variables → Actions:
+   - `ANTHROPIC_API_KEY` — Claude API key (generator uses `claude-opus-4-8`)
+   - `SUPABASE_SECRET_KEY` — from Supabase dashboard → Project Settings →
+     API Keys → secret key
+2. That's it. Cloudflare Pages picks up the `functions/` directory
+   automatically on the next deploy of the repo.
 
-## Files
+## Review workflow (per post)
 
-| file | purpose |
-|---|---|
-| `config.yml` | site URLs, brand blurb, content pillars, limits |
-| `style_guide.md` | the writer's voice + banned AI tells + citation rules |
-| `generate_post.py` | research → draft → polish; writes `posts/<slug>.md` |
-| `build_blog.py` | deterministic renderer for all blog output |
-| `../posts/*.md` | source of truth: one markdown file per post |
-| `../blog/` | generated HTML (committed; served by Cloudflare Pages) |
+1. The Actions run finishes and its job summary links to the draft.
+2. Open the [posts table](https://supabase.com/dashboard/project/hfcykydchzwfgotnztsb/editor)
+   in Supabase, read `body_md`, edit anything you like.
+3. Check: citations support the claims; no AI tells; the Joice plug is
+   tasteful (1-2 links); title/description sensible for search.
+4. Set `status` to `published`. Done — live at `/blog/<slug>/` within a
+   minute (pages cache for up to 5 minutes at the edge).
+
+To unpublish, set `status` back to `draft`. To fix a typo, just edit
+`body_md` — the site re-renders on the next request.
 
 ## Local usage
 
 ```sh
 pip install -r pipeline/requirements.txt
 
-# generate a post (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
-python3 pipeline/generate_post.py                 # auto topic
-python3 pipeline/generate_post.py --topic "..."   # specific topic
-
-# rebuild the blog after editing any posts/*.md
-python3 pipeline/build_blog.py
+# needs ANTHROPIC_API_KEY; needs SUPABASE_SECRET_KEY unless --dry-run
+python3 pipeline/generate_post.py                     # auto topic -> draft
+python3 pipeline/generate_post.py --topic "..."       # specific topic
+python3 pipeline/generate_post.py --dry-run out.json  # no upload, no keys
 ```
 
-Posts are plain markdown with YAML frontmatter — you can also write one by
-hand, drop it in `posts/`, run `build_blog.py`, and commit.
+To test the website functions locally:
 
-## Review checklist (for the human on the PR)
-
-- Do the cited links actually support the claims made?
-- Does it read like a person wrote it? Any AI tells the editor missed?
-- Is the Joice mention tasteful (1-2 links, no hard sell)?
-- Title/description sensible for search?
+```sh
+npx wrangler pages dev .    # serves static site + functions on :8788
+```
 
 ## Schedule
 
 `.github/workflows/blog-generate.yml` runs at 13:07 and 22:07 UTC (~6am and
-~3pm Pacific). Edit the two `cron:` lines to change cadence. You can also run
-it on demand from the Actions tab (`workflow_dispatch`), optionally with a
-topic override.
+~3pm Pacific). Edit the two `cron:` lines to change cadence, or run on demand
+from the Actions tab (optionally with a topic override).
