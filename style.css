@@ -1520,11 +1520,11 @@ a.blog-tag:hover { background: rgba(168, 179, 161, 0.35); }
 }
 
 /* related essays under a post */
-.blog-related { margin-top: 56px; }
+.blog-related { margin-top: 84px; }
 
 .blog-related > h2 {
     font-size: 22px;
-    margin-bottom: 18px;
+    margin-bottom: 28px;
 }
 
 .blog-related-grid {
