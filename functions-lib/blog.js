@@ -32,11 +32,8 @@ export function fetchPosts() {
     `posts?select=${LIST_FIELDS}&status=eq.published&order=published_at.desc`);
 }
 
-export async function fetchPost(slug) {
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
-  const rows = await supabaseGet(
-    `posts?select=${LIST_FIELDS}&status=eq.published&slug=eq.${slug}&limit=1`);
-  return rows[0] || null;
+export function validSlug(slug) {
+  return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug);
 }
 
 // ---------------------------------------------------------------- utilities

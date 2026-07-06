@@ -24,6 +24,7 @@ Joice is available for iOS. Download: ${APP_STORE_URL}
 ## Blog — ${BLOG_TITLE}
 
 ${BLOG_DESC}
+Full text of every post: ${SITE}/llms-full.txt
 Machine-readable index: ${SITE}/blog/posts.json
 RSS: ${SITE}/blog/feed.xml
 

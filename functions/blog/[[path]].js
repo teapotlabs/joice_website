@@ -3,13 +3,19 @@
 
 import {
   SITE, APP_STORE_URL, BLOG_TITLE, BLOG_DESC,
-  fetchPosts, fetchPost, esc, isoDate, prettyDate, monthLabel,
+  fetchPosts, validSlug, esc, isoDate, prettyDate, monthLabel,
   readingMinutes, mdToHtml, headHtml, NAV, FOOTER, htmlResponse, errorPage,
 } from "../../functions-lib/blog.js";
 
 export async function onRequestGet(context) {
   const segments = (context.params.path || []).filter(Boolean);
   try {
+    // canonicalize: /blog and /blog/<slug> redirect to trailing-slash form
+    const url = new URL(context.request.url);
+    const isFile = segments.length === 1 && segments[0].includes(".");
+    if (!isFile && !url.pathname.endsWith("/")) {
+      return Response.redirect(`${SITE}${url.pathname}/`, 301);
+    }
     if (segments.length === 0) {
       return renderIndex();
     }
@@ -30,8 +36,22 @@ export async function onRequestGet(context) {
 
 // ------------------------------------------------------------------- post
 
+function relatedPosts(post, all, count = 2) {
+  const mine = new Set(post.tags || []);
+  return all
+    .filter((p) => p.slug !== post.slug)
+    .map((p) => [
+      (p.tags || []).reduce((n, t) => n + (mine.has(t) ? 1 : 0), 0), p,
+    ])
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, count)
+    .map(([, p]) => p);
+}
+
 async function renderPost(slug) {
-  const post = await fetchPost(slug);
+  if (!validSlug(slug)) return errorPage(404, "essay not found");
+  const all = await fetchPosts();
+  const post = all.find((p) => p.slug === slug);
   if (!post) return errorPage(404, "essay not found");
 
   const url = `${SITE}/blog/${post.slug}/`;
@@ -70,7 +90,41 @@ ${sourceItems}
     })),
     isPartOf: { "@type": "Blog", name: BLOG_TITLE, url: `${SITE}/blog/` },
   };
-  const extra = `    <script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 2)}\n    </script>\n`;
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "joice", item: SITE + "/" },
+      { "@type": "ListItem", position: 2, name: BLOG_TITLE, item: `${SITE}/blog/` },
+      { "@type": "ListItem", position: 3, name: post.title, item: url },
+    ],
+  };
+  const articleMeta = [
+    '    <meta property="og:type" content="article">',
+    `    <meta property="article:published_time" content="${isoDate(post.published_at)}">`,
+    ...(post.tags || []).map((t) =>
+      `    <meta property="article:tag" content="${esc(t)}">`),
+  ].join("\n") + "\n";
+  const extra = articleMeta +
+    `    <script type="application/ld+json">\n${JSON.stringify(jsonLd, null, 2)}\n    </script>\n` +
+    `    <script type="application/ld+json">\n${JSON.stringify(breadcrumbs, null, 2)}\n    </script>\n`;
+
+  const related = relatedPosts(post, all);
+  const relatedSection = related.length ? `
+            <aside class="blog-related">
+                <h2>more from the journal</h2>
+                <div class="blog-related-grid">
+${related.map((p) => `                    <a class="blog-card" href="/blog/${esc(p.slug)}/">
+                        <div class="blog-card-meta">
+                            <span>${prettyDate(p.published_at)}</span>
+                            <span class="blog-meta-dot">&middot;</span>
+                            <span>${readingMinutes(p.body_md)} min read</span>
+                        </div>
+                        <h3>${esc(p.title)}</h3>
+                        <p>${esc(p.description)}</p>
+                    </a>`).join("\n")}
+                </div>
+            </aside>` : "";
 
   const body = `${headHtml(`${post.title} — ${BLOG_TITLE}`, post.description, url, extra)}
 <body class="blog-body">
@@ -106,6 +160,7 @@ ${sourcesSection}
                 <a href="${APP_STORE_URL}" class="btn-primary">get the app</a>
             </aside>
         </article>
+${relatedSection}
     </main>
 
 ${FOOTER}
@@ -149,7 +204,24 @@ async function renderIndex() {
   const empty = posts.length ? "" :
     '                <p class="blog-empty">first essays are on their way.</p>';
 
-  const body = `${headHtml(`${BLOG_TITLE} — essays on journaling & mental health`, BLOG_DESC, `${SITE}/blog/`)}
+  const blogLd = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: BLOG_TITLE,
+    description: BLOG_DESC,
+    url: `${SITE}/blog/`,
+    publisher: { "@type": "Organization", name: "Joice", url: SITE },
+    blogPost: posts.map((p) => ({
+      "@type": "BlogPosting",
+      headline: p.title,
+      url: `${SITE}/blog/${p.slug}/`,
+      datePublished: isoDate(p.published_at),
+    })),
+  };
+  const indexExtra =
+    `    <script type="application/ld+json">\n${JSON.stringify(blogLd, null, 2)}\n    </script>\n`;
+
+  const body = `${headHtml(`${BLOG_TITLE} — essays on journaling & mental health`, BLOG_DESC, `${SITE}/blog/`, indexExtra)}
 <body class="blog-body">
 ${NAV}
 
