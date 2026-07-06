@@ -144,7 +144,7 @@ export const NAV = `    <nav>
             <div class="nav-links">
                 <a href="/#features">features</a>
                 <a href="/blog/">blog</a>
-                <a href="/#download" class="btn-nav">download</a>
+                <a href="${APP_STORE_URL}" class="btn-nav">download</a>
             </div>
         </div>
     </nav>`;
@@ -161,7 +161,7 @@ export const FOOTER = `    <footer>
                         <h4>product</h4>
                         <a href="/#features">features</a>
                         <a href="/blog/">blog</a>
-                        <a href="/#download">download</a>
+                        <a href="${APP_STORE_URL}">download</a>
                     </div>
                     <div class="footer-col">
                         <h4>legal</h4>
