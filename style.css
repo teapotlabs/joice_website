@@ -417,7 +417,7 @@ nav {
 /* =====================================================
    Phone mockup — the production Talk screen
    (HomeView idleLayer: greeting, leaf call button,
-   capture toggle, prompt ideas, glass tab bar)
+   prompt ideas, glass tab bar)
    ===================================================== */
 
 .phone-mockup {
@@ -455,82 +455,35 @@ nav {
     border-radius: 999px;
 }
 
-.mock-streak {
-    position: absolute;
-    top: 52px;
-    right: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fern-night);
-}
-
 .mock-greeting {
     font-family: var(--serif);
-    font-size: 24px;
+    font-size: 26px;
     letter-spacing: 0.03em;
     color: var(--fern-night);
     text-align: center;
     line-height: 1.3;
-    margin: 14px 0 6px;
+    margin: 26px 0 8px;
 }
 
 .mock-prompt-line {
     font-size: 13.5px;
     letter-spacing: 0.03em;
     color: var(--fern-night);
-    margin-bottom: 10px;
 }
 
-/* the leaf IS the call button — it breathes */
+/* the leaf IS the call button — it breathes,
+   floating in the open sky between prompt and ideas */
 .mock-leaf {
-    width: 118px;
+    width: 148px;
     height: auto;
-    margin: 4px 0 6px;
-    filter: drop-shadow(0 10px 22px rgba(45, 55, 90, 0.35));
+    margin: auto 0;
+    filter: drop-shadow(0 12px 26px rgba(45, 55, 90, 0.35));
     animation: breathe 2.4s ease-in-out infinite;
 }
 
 @keyframes breathe {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
-}
-
-.mock-instruction {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    color: var(--fern-night);
-    margin-bottom: 12px;
-}
-
-/* CaptureModeToggle — glass capsule, cream selected segment */
-.mock-toggle {
-    display: flex;
-    gap: 4px;
-    padding: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 999px;
-    box-shadow: 0 4px 10px rgba(45, 55, 90, 0.15);
-    margin-bottom: 18px;
-}
-
-.mock-seg {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10.5px;
-    font-weight: 500;
-    color: var(--fern-muted-night);
-    padding: 5px 12px;
-    border-radius: 999px;
-}
-
-.mock-seg svg { width: 11px; height: 11px; }
-
-.mock-seg.active {
-    background: rgba(255, 254, 247, 0.92);
-    color: var(--fern);
-    box-shadow: 0 2px 6px rgba(45, 55, 90, 0.12);
 }
 
 .mock-inspo-label {
@@ -570,7 +523,7 @@ nav {
 /* GlassTabBar — frosted capsule: talk · journal · themes · you */
 .mock-tabbar {
     width: 244px;
-    margin-top: auto;
+    margin-top: 20px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.56));
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 999px;
