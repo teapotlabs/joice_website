@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <title>joice review</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body { background: var(--warm-white); }
+        body::after { display: none; } /* skip the grain on form-heavy UI */
+
+        .rv-wrap { max-width: 680px; margin: 0 auto; padding: 18px 16px 80px; }
+
+        .rv-top {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 2px 16px;
+        }
+        .rv-top h1 { font-size: 26px; }
+        .rv-logo { display: inline-flex; align-items: center; gap: 10px; }
+        .rv-logo img { width: 30px; height: 30px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(var(--shadow-tint), 0.35); }
+        .rv-signout {
+            font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+            color: var(--fern-muted); background: none; border: none;
+            cursor: pointer; text-transform: lowercase;
+        }
+
+        .rv-card {
+            background: var(--cream);
+            border: 1px solid rgba(var(--shadow-tint), 0.16);
+            border-radius: var(--radius-card);
+            padding: 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(var(--shadow-tint), 0.10);
+        }
+        .rv-card.tappable { cursor: pointer; transition: transform 0.2s ease; }
+        .rv-card.tappable:active { transform: scale(0.985); }
+
+        .rv-status {
+            display: inline-flex; align-items: center;
+            font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: lowercase; padding: 4px 12px; border-radius: 999px;
+        }
+        .rv-status.draft { background: var(--pill-tint); color: var(--fern); }
+        .rv-status.published { background: var(--fern); color: var(--cream-deep); }
+        .rv-status.rewrite_requested { background: #E9DFC8; color: #7A6428; }
+
+        .rv-card h2 { font-size: 20px; line-height: 1.3; margin: 10px 0 6px; }
+        .rv-card .rv-desc { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+        .rv-meta { font-size: 12px; color: var(--fern-muted); font-weight: 600;
+            margin-top: 10px; text-transform: lowercase; }
+        .rv-notes-flag { color: #7A6428; }
+
+        .rv-section-label {
+            font-family: var(--serif); font-size: 14px; font-weight: 500;
+            letter-spacing: 0.06em; text-transform: lowercase;
+            color: var(--fern-muted); margin: 26px 0 12px;
+        }
+
+        label.rv-label {
+            display: block; font-size: 12px; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: lowercase;
+            color: var(--fern-muted); margin: 16px 0 6px;
+        }
+        .rv-input, .rv-textarea {
+            width: 100%; font-family: var(--sans); font-size: 15px;
+            color: var(--ink); background: var(--warm-white);
+            border: 1px solid rgba(var(--shadow-tint), 0.35);
+            border-radius: 12px; padding: 12px 14px; outline: none;
+        }
+        .rv-input:focus, .rv-textarea:focus { border-color: var(--sage); }
+        .rv-textarea { line-height: 1.6; resize: vertical; }
+        .rv-textarea.rv-body { min-height: 320px; font-size: 14px; }
+
+        .rv-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: var(--sans); font-size: 14.5px; font-weight: 600;
+            letter-spacing: 0.02em; text-transform: lowercase;
+            border-radius: 999px; padding: 12px 22px; border: none;
+            cursor: pointer; transition: transform 0.15s ease, opacity 0.2s;
+        }
+        .rv-btn:active { transform: scale(0.97); }
+        .rv-btn:disabled { opacity: 0.45; pointer-events: none; }
+        .rv-btn.primary { background: var(--fern); color: var(--cream-deep);
+            box-shadow: 0 4px 14px rgba(var(--shadow-tint), 0.35); }
+        .rv-btn.ghost { background: var(--pill-tint); color: var(--fern);
+            border: 1px solid rgba(168, 179, 161, 0.5); }
+        .rv-btn.warn { background: #E9DFC8; color: #7A6428; }
+        .rv-btn.danger { background: #EAD9D3; color: #8A4B36; }
+
+        .rv-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .rv-actions .rv-btn { flex: 1 1 45%; }
+
+        .rv-back {
+            display: inline-block; background: none; border: none;
+            font-family: var(--sans); font-size: 14px; font-weight: 600;
+            color: var(--fern-muted); cursor: pointer;
+            text-transform: lowercase; padding: 0; margin-bottom: 14px;
+        }
+
+        .rv-preview {
+            font-size: 15.5px; line-height: 1.8; color: var(--ink);
+            background: var(--cream-deep);
+            border: 1.5px dashed rgba(168, 179, 161, 0.7);
+            border-radius: var(--radius-card); padding: 20px; margin-top: 10px;
+        }
+        .rv-preview h2 { font-size: 21px; margin: 22px 0 10px; }
+        .rv-preview h3 { font-family: var(--serif); text-transform: lowercase;
+            color: var(--fern); font-size: 17px; margin: 18px 0 8px; }
+        .rv-preview p { margin-bottom: 14px; }
+        .rv-preview a { color: var(--fern); }
+        .rv-preview blockquote { border-left: 3px solid var(--sage);
+            padding-left: 14px; font-style: italic; color: var(--ink-soft);
+            margin: 14px 0; }
+        .rv-preview ul, .rv-preview ol { padding-left: 22px; margin-bottom: 14px; }
+
+        #toast {
+            position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+            background: var(--ink); color: var(--warm-white);
+            font-size: 13.5px; font-weight: 600; padding: 11px 22px;
+            border-radius: 999px; opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease; z-index: 50; max-width: 86vw;
+            text-align: center;
+        }
+        #toast.show { opacity: 1; }
+        #toast.err { background: #8A4B36; }
+
+        .rv-empty { font-family: var(--serif); font-style: italic;
+            color: var(--fern-muted); padding: 18px 4px; }
+        .rv-hint { font-size: 12.5px; color: var(--fern-muted); line-height: 1.6;
+            margin-top: 10px; }
+        .rv-spin { text-align: center; padding: 40px 0;
+            font-family: var(--serif); color: var(--fern-muted); font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="rv-wrap">
+        <div class="rv-top">
+            <span class="rv-logo"><img src="/assets/joice-icon.png" alt=""><h1>review</h1></span>
+            <button class="rv-signout" id="signout" style="display:none">sign out</button>
+        </div>
+        <div id="app"><div class="rv-spin">loading&hellip;</div></div>
+    </div>
+    <div id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://hfcykydchzwfgotnztsb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_DWplZMwp3dt_50oX6aCoXA_fJ0H0rT2";
+const app = document.getElementById("app");
+const signoutBtn = document.getElementById("signout");
+
+let posts = [];
+let current = null; // post being viewed
+
+// ------------------------------------------------------------------ helpers
+
+function token() { return localStorage.getItem("joice_review_token") || ""; }
+
+async function rpc(name, args) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: {
+            apikey: SUPABASE_KEY,
+            authorization: `Bearer ${SUPABASE_KEY}`,
+            "content-type": "application/json",
+        },
+        body: JSON.stringify({ p_token: token(), ...args }),
+    });
+    if (!res.ok) {
+        let msg = `error ${res.status}`;
+        try { msg = (await res.json()).message || msg; } catch (e) {}
+        throw new Error(msg);
+    }
+    return res.json();
+}
+
+function toast(msg, isErr) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = "show" + (isErr ? " err" : "");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ""; }, 2600);
+}
+
+function esc(s) {
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function fmtDate(ts) {
+    if (!ts) return "";
+    return new Date(ts).toLocaleDateString("en-US",
+        { month: "short", day: "numeric", year: "numeric" }).toLowerCase();
+}
+
+const STATUS_LABEL = {
+    draft: "awaiting review",
+    published: "published",
+    rewrite_requested: "rewrite queued",
+};
+
+// tiny markdown renderer (matches the subset the site renders)
+function inline(t) {
+    return t.replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" rel="noopener" target="_blank">$1</a>')
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+}
+function mdToHtml(md) {
+    return md.replace(/\r\n/g, "\n").trim().split(/\n{2,}/).map((raw) => {
+        const b = esc(raw.trim());
+        if (!b) return "";
+        if (/^###\s+/.test(b)) return `<h3>${inline(b.replace(/^###\s+/, ""))}</h3>`;
+        if (/^##\s+/.test(b)) return `<h2>${inline(b.replace(/^##\s+/, ""))}</h2>`;
+        if (/^(-{3,}|\*{3,})$/.test(b)) return "<hr>";
+        if (b.split("\n").every((l) => /^&gt;\s?/.test(l)))
+            return `<blockquote><p>${inline(b.split("\n").map((l) => l.replace(/^&gt;\s?/, "")).join(" "))}</p></blockquote>`;
+        if (b.split("\n").every((l) => /^[-*]\s+/.test(l)))
+            return `<ul>${b.split("\n").map((l) => `<li>${inline(l.replace(/^[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+        if (b.split("\n").every((l) => /^\d+\.\s+/.test(l)))
+            return `<ol>${b.split("\n").map((l) => `<li>${inline(l.replace(/^\d+\.\s+/, ""))}</li>`).join("")}</ol>`;
+        return `<p>${inline(b.replace(/\n/g, " "))}</p>`;
+    }).join("\n");
+}
+
+// -------------------------------------------------------------------- views
+
+function renderGate(message) {
+    signoutBtn.style.display = "none";
+    app.innerHTML = `
+        <div class="rv-card">
+            <h2>sign in</h2>
+            <p class="rv-hint">${esc(message || "Enter the review access token.")}</p>
+            <label class="rv-label" for="gate-token">access token</label>
+            <input class="rv-input" id="gate-token" type="password" autocomplete="current-password">
+            <div class="rv-actions">
+                <button class="rv-btn primary" id="gate-go">enter</button>
+            </div>
+        </div>`;
+    const input = document.getElementById("gate-token");
+    document.getElementById("gate-go").onclick = async () => {
+        localStorage.setItem("joice_review_token", input.value.trim());
+        await load();
+    };
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.getElementById("gate-go").click();
+    });
+}
+
+function renderList() {
+    signoutBtn.style.display = "";
+    current = null;
+    const pending = posts.filter((p) => p.status !== "published");
+    const published = posts.filter((p) => p.status === "published");
+
+    const card = (p, tappable = true) => `
+        <div class="rv-card${tappable ? " tappable" : ""}" data-id="${p.id}">
+            <span class="rv-status ${p.status}">${STATUS_LABEL[p.status]}</span>
+            <h2>${esc(p.title)}</h2>
+            <div class="rv-desc">${esc(p.description)}</div>
+            <div class="rv-meta">
+                ${fmtDate(p.published_at || p.created_at)} &middot;
+                ${(p.tags || []).join(", ")}
+                ${p.review_notes ? ' &middot; <span class="rv-notes-flag">has notes</span>' : ""}
+            </div>
+        </div>`;
+
+    app.innerHTML = `
+        <div class="rv-section-label">awaiting your review (${pending.length})</div>
+        ${pending.map((p) => card(p)).join("") ||
+          '<p class="rv-empty">nothing waiting — the pipeline runs at ~6am and ~3pm pacific.</p>'}
+        <div class="rv-section-label">published (${published.length})</div>
+        ${published.map((p) => card(p)).join("")}`;
+
+    app.querySelectorAll(".rv-card.tappable").forEach((el) => {
+        el.onclick = () => {
+            current = posts.find((p) => p.id === el.dataset.id);
+            renderDetail();
+            window.scrollTo(0, 0);
+        };
+    });
+}
+
+function renderDetail() {
+    const p = current;
+    const isPublished = p.status === "published";
+    app.innerHTML = `
+        <button class="rv-back" id="back">&larr; all posts</button>
+        <div class="rv-card">
+            <span class="rv-status ${p.status}">${STATUS_LABEL[p.status]}</span>
+            <div class="rv-meta">/blog/${esc(p.slug)}/ &middot; ${(p.body_md.match(/\w+/g) || []).length} words</div>
+
+            <label class="rv-label" for="f-title">title</label>
+            <input class="rv-input" id="f-title" value="${esc(p.title)}">
+
+            <label class="rv-label" for="f-desc">description</label>
+            <textarea class="rv-textarea" id="f-desc" rows="3">${esc(p.description)}</textarea>
+
+            <label class="rv-label" for="f-body">essay (markdown) &middot;
+                <a href="#" id="toggle-preview" style="color:var(--fern)">preview</a></label>
+            <textarea class="rv-textarea rv-body" id="f-body">${esc(p.body_md)}</textarea>
+            <div class="rv-preview" id="preview" style="display:none"></div>
+
+            <div class="rv-actions">
+                <button class="rv-btn ghost" id="save-edits">save edits</button>
+                ${isPublished
+                    ? '<button class="rv-btn danger" id="unpublish">unpublish</button>'
+                    : '<button class="rv-btn primary" id="approve">approve &amp; publish</button>'}
+            </div>
+        </div>
+
+        <div class="rv-card">
+            <label class="rv-label" for="f-notes" style="margin-top:0">your notes</label>
+            <textarea class="rv-textarea" id="f-notes" rows="5"
+                placeholder="what should be different? these notes steer the rewrite of this post and the prompts for all future posts.">${esc(p.review_notes || "")}</textarea>
+            <div class="rv-actions">
+                <button class="rv-btn ghost" id="save-notes">save notes</button>
+                ${p.status === "rewrite_requested"
+                    ? '<button class="rv-btn danger" id="cancel-rewrite">cancel rewrite</button>'
+                    : '<button class="rv-btn warn" id="request-rewrite">request rewrite</button>'}
+            </div>
+            <p class="rv-hint">Rewrites run automatically about once an hour: the essay is
+            rewritten against your notes and returns here as a fresh draft.
+            Saved notes are also fed into the writer's prompts for every future post.</p>
+        </div>`;
+
+    document.getElementById("back").onclick = () => renderList();
+
+    document.getElementById("toggle-preview").onclick = (e) => {
+        e.preventDefault();
+        const pv = document.getElementById("preview");
+        const body = document.getElementById("f-body");
+        const showing = pv.style.display !== "none";
+        pv.style.display = showing ? "none" : "";
+        body.style.display = showing ? "" : "none";
+        e.target.textContent = showing ? "preview" : "edit";
+        if (!showing) pv.innerHTML = mdToHtml(body.value);
+    };
+
+    document.getElementById("save-edits").onclick = () => act(async () => {
+        const updated = await rpc("review_update", {
+            p_id: p.id,
+            p_title: document.getElementById("f-title").value.trim(),
+            p_description: document.getElementById("f-desc").value.trim(),
+            p_body_md: document.getElementById("f-body").value,
+        });
+        merge(updated);
+        toast("edits saved");
+    });
+
+    document.getElementById("save-notes").onclick = () => act(async () => {
+        const updated = await rpc("review_save_notes", {
+            p_id: p.id, p_notes: document.getElementById("f-notes").value,
+        });
+        merge(updated);
+        toast("notes saved");
+    });
+
+    const approve = document.getElementById("approve");
+    if (approve) approve.onclick = () => act(async () => {
+        const updated = await rpc("review_set_status", { p_id: p.id, p_status: "published" });
+        merge(updated);
+        toast("published — live in ~5 minutes");
+        renderList();
+    });
+
+    const unpublish = document.getElementById("unpublish");
+    if (unpublish) unpublish.onclick = () => act(async () => {
+        const updated = await rpc("review_set_status", { p_id: p.id, p_status: "draft" });
+        merge(updated);
+        toast("unpublished");
+        renderList();
+    });
+
+    const rewrite = document.getElementById("request-rewrite");
+    if (rewrite) rewrite.onclick = () => act(async () => {
+        const notes = document.getElementById("f-notes").value.trim();
+        if (!notes) { toast("add notes first — they drive the rewrite", true); return; }
+        await rpc("review_save_notes", { p_id: p.id, p_notes: notes });
+        const updated = await rpc("review_set_status", { p_id: p.id, p_status: "rewrite_requested" });
+        merge(updated);
+        toast("rewrite queued — runs within the hour");
+        renderList();
+    });
+
+    const cancel = document.getElementById("cancel-rewrite");
+    if (cancel) cancel.onclick = () => act(async () => {
+        const updated = await rpc("review_set_status", { p_id: p.id, p_status: "draft" });
+        merge(updated);
+        toast("rewrite cancelled");
+        renderDetail();
+    });
+}
+
+function merge(updated) {
+    const i = posts.findIndex((x) => x.id === updated.id);
+    if (i >= 0) posts[i] = updated;
+    if (current && current.id === updated.id) current = updated;
+}
+
+async function act(fn) {
+    try { await fn(); }
+    catch (e) { toast(e.message, true); }
+}
+
+// -------------------------------------------------------------------- boot
+
+async function load() {
+    if (!token()) { renderGate(); return; }
+    app.innerHTML = '<div class="rv-spin">loading&hellip;</div>';
+    try {
+        posts = await rpc("review_list", {});
+        renderList();
+    } catch (e) {
+        localStorage.removeItem("joice_review_token");
+        renderGate(e.message === "invalid review token"
+            ? "That token wasn't right — try again." : e.message);
+    }
+}
+
+signoutBtn.onclick = () => {
+    localStorage.removeItem("joice_review_token");
+    renderGate();
+};
+
+// one-tap sign in: /review/#token=... (fragment never reaches any server log)
+const hashTok = location.hash.match(/^#token=(.+)$/);
+if (hashTok) {
+    localStorage.setItem("joice_review_token", decodeURIComponent(hashTok[1]));
+    history.replaceState(null, "", location.pathname);
+}
+
+load();
+</script>
+</body>
+</html>

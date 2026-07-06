@@ -47,16 +47,28 @@ the *secret* key, which lives only in GitHub Actions secrets.
 
 ## Review workflow (per post)
 
-1. The Actions run finishes and its job summary links to the draft.
-2. Open the [posts table](https://supabase.com/dashboard/project/hfcykydchzwfgotnztsb/editor)
-   in Supabase, read `body_md`, edit anything you like.
-3. Check: citations support the claims; no AI tells; the Joice plug is
-   tasteful (1-2 links); title/description sensible for search.
-4. Set `status` to `published`. Done — live at `/blog/<slug>/` within a
-   minute (pages cache for up to 5 minutes at the edge).
+**The review console at [joiceapp.com/review/](https://joiceapp.com/review/)**
+is the primary tool — mobile-friendly, token-gated (token hash lives in the
+`private.review_config` table; rotate by updating that row). From there you
+can:
 
-To unpublish, set `status` back to `draft`. To fix a typo, just edit
-`body_md` — the site re-renders on the next request.
+- read every draft, edit title/description/body inline, and **approve &
+  publish** (live at `/blog/<slug>/` within ~5 minutes)
+- **save notes** on any post — notes steer that post's rewrite AND are
+  injected into the writer/editor prompts for all future posts
+  (`reviewer_feedback()` in `generate_post.py`)
+- **request a rewrite** — flags the post `rewrite_requested`; the hourly
+  `blog-rewrite.yml` workflow rewrites it against your notes
+  (`process_rewrites.py`) and returns it to the drafts queue
+- unpublish anything published
+
+The console talks to token-gated Postgres RPCs (`review_list`,
+`review_update`, `review_save_notes`, `review_set_status`) using only the
+publishable key, so it needs no server or extra secrets. The Supabase Table
+Editor still works as a fallback.
+
+Review checklist: citations support the claims; no AI tells; the Joice plug
+is tasteful (1-2 links); title/description sensible for search.
 
 ## Local usage
 

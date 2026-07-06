@@ -1,32 +1,42 @@
 User-agent: *
 Allow: /
+Disallow: /review/
 
 # AI crawlers are explicitly welcome — see also /llms.txt and /llms-full.txt
 User-agent: GPTBot
 Allow: /
+Disallow: /review/
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /review/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /review/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /review/
 
 User-agent: Claude-User
 Allow: /
+Disallow: /review/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /review/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /review/
 
 User-agent: CCBot
 Allow: /
+Disallow: /review/
 
 User-agent: Bytespider
 Allow: /
+Disallow: /review/
 
 Sitemap: https://joiceapp.com/sitemap.xml
