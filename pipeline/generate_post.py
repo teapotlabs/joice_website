@@ -70,6 +70,27 @@ def load_style_guide():
     return (PIPELINE_DIR / "style_guide.md").read_text()
 
 
+def load_effective_style_guide(cfg):
+    """Style guide plus the active standing guidance distilled from reviewer
+    notes (versioned in Supabase; managed from joiceapp.com/review/)."""
+    guide = load_style_guide()
+    if not os.environ.get("SUPABASE_SECRET_KEY"):
+        return guide
+    r = requests.get(
+        cfg["supabase_url"] + "/rest/v1/prompt_guidance",
+        params={"select": "version,content", "is_active": "eq.true", "limit": "1"},
+        headers=supabase_headers(cfg),
+        timeout=30,
+    )
+    r.raise_for_status()
+    rows = r.json()
+    if not rows:
+        return guide
+    return (guide + "\n\n## standing editorial guidance (v{}, distilled from "
+            "the human editor's notes — part of the style guide)\n\n{}\n".format(
+                rows[0]["version"], rows[0]["content"]))
+
+
 # ------------------------------------------------------------- supabase i/o
 
 def supabase_headers(cfg):
@@ -97,6 +118,29 @@ def existing_posts(cfg):
     )
     r.raise_for_status()
     return r.json()
+
+
+def reviewer_feedback(cfg):
+    """Recent notes from the human reviewer (joiceapp.com/review/), injected
+    into the writing prompts as standing editorial guidance."""
+    if not os.environ.get("SUPABASE_SECRET_KEY"):
+        return ""
+    r = requests.get(
+        cfg["supabase_url"] + "/rest/v1/posts",
+        params={"select": "title,review_notes", "review_notes": "not.is.null",
+                "order": "updated_at.desc", "limit": "10"},
+        headers=supabase_headers(cfg),
+        timeout=30,
+    )
+    r.raise_for_status()
+    notes = [(p["title"], p["review_notes"].strip())
+             for p in r.json() if (p.get("review_notes") or "").strip()]
+    if not notes:
+        return ""
+    lines = "\n".join('- on "{}": {}'.format(t, n) for t, n in notes)
+    return ("\nREVIEWER FEEDBACK — notes the human editor left on previous "
+            "essays. Treat them as standing guidance and apply them to this "
+            "essay too:\n{}\n".format(lines))
 
 
 def unique_slug(slug, taken):
@@ -194,10 +238,11 @@ def run_research(client, cfg, topic_override):
     return collect_text(response)
 
 
-def run_draft(client, cfg, style_guide, research_brief):
+def run_draft(client, cfg, style_guide, research_brief, standing_feedback=""):
     prompt = (
         "You write essays for the blog of {site}. Brand context: {blurb}\n\n"
-        "STYLE GUIDE (follow it exactly):\n{style}\n\n"
+        "STYLE GUIDE (follow it exactly):\n{style}\n"
+        "{standing_feedback}\n"
         "RESEARCH BRIEF (cite only these sources; never invent facts or URLs):\n"
         "{research}\n\n"
         "Write the full essay now. Requirements:\n"
@@ -210,6 +255,7 @@ def run_draft(client, cfg, style_guide, research_brief):
         "- body_markdown must not repeat the title as a heading"
     ).format(site=cfg["site_name"], blurb=cfg["brand_blurb"].strip(),
              style=style_guide, research=research_brief,
+             standing_feedback=standing_feedback,
              min_words=cfg["min_words"], max_words=cfg["max_words"],
              app_url=cfg["app_store_url"])
 
@@ -224,11 +270,13 @@ def run_draft(client, cfg, style_guide, research_brief):
     return json.loads(collect_text(response))
 
 
-def run_polish(client, cfg, style_guide, research_brief, draft, feedback=None):
+def run_polish(client, cfg, style_guide, research_brief, draft, feedback=None,
+               standing_feedback=""):
     prompt = (
         "You are the editor for the blog of {site}. Below is a draft essay as JSON, "
         "the research brief it must stay grounded in, and the style guide.\n\n"
-        "STYLE GUIDE:\n{style}\n\n"
+        "STYLE GUIDE:\n{style}\n"
+        "{standing_feedback}\n"
         "RESEARCH BRIEF:\n{research}\n\n"
         "DRAFT:\n{draft}\n\n"
         "{feedback}"
@@ -247,6 +295,7 @@ def run_polish(client, cfg, style_guide, research_brief, draft, feedback=None):
              draft=json.dumps(draft, indent=2),
              feedback=("PREVIOUS VALIDATION FAILURE — you must fix this: {}\n\n".format(feedback)
                        if feedback else ""),
+             standing_feedback=standing_feedback,
              app_url=cfg["app_store_url"],
              min_words=cfg["min_words"], max_words=cfg["max_words"])
 
@@ -310,27 +359,33 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config()
-    style_guide = load_style_guide()
+    style_guide = load_effective_style_guide(cfg)
     client = anthropic.Anthropic()
 
     print("[1/3] researching...", flush=True)
     research_brief = run_research(client, cfg, args.topic)
     print(research_brief[:600], "...\n", flush=True)
 
+    standing = reviewer_feedback(cfg)
+    if standing:
+        print("(applying reviewer feedback from {} previous note(s))".format(
+            standing.count("\n- on ")), flush=True)
+
     print("[2/3] drafting...", flush=True)
-    draft = run_draft(client, cfg, style_guide, research_brief)
+    draft = run_draft(client, cfg, style_guide, research_brief, standing)
     print("draft: {!r} ({} words)".format(
         draft["title"], len(draft["body_markdown"].split())), flush=True)
 
     print("[3/3] polishing...", flush=True)
-    post = run_polish(client, cfg, style_guide, research_brief, draft)
+    post = run_polish(client, cfg, style_guide, research_brief, draft,
+                      standing_feedback=standing)
 
     problems = validate(post, cfg)
     if problems:
         print("validation failed, retrying polish with feedback:\n  " +
               "\n  ".join(problems), flush=True)
         post = run_polish(client, cfg, style_guide, research_brief, post,
-                          feedback="; ".join(problems))
+                          feedback="; ".join(problems), standing_feedback=standing)
         problems = validate(post, cfg)
 
     if problems:
