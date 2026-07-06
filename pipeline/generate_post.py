@@ -70,6 +70,27 @@ def load_style_guide():
     return (PIPELINE_DIR / "style_guide.md").read_text()
 
 
+def load_effective_style_guide(cfg):
+    """Style guide plus the active standing guidance distilled from reviewer
+    notes (versioned in Supabase; managed from joiceapp.com/review/)."""
+    guide = load_style_guide()
+    if not os.environ.get("SUPABASE_SECRET_KEY"):
+        return guide
+    r = requests.get(
+        cfg["supabase_url"] + "/rest/v1/prompt_guidance",
+        params={"select": "version,content", "is_active": "eq.true", "limit": "1"},
+        headers=supabase_headers(cfg),
+        timeout=30,
+    )
+    r.raise_for_status()
+    rows = r.json()
+    if not rows:
+        return guide
+    return (guide + "\n\n## standing editorial guidance (v{}, distilled from "
+            "the human editor's notes — part of the style guide)\n\n{}\n".format(
+                rows[0]["version"], rows[0]["content"]))
+
+
 # ------------------------------------------------------------- supabase i/o
 
 def supabase_headers(cfg):
@@ -338,7 +359,7 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config()
-    style_guide = load_style_guide()
+    style_guide = load_effective_style_guide(cfg)
     client = anthropic.Anthropic()
 
     print("[1/3] researching...", flush=True)

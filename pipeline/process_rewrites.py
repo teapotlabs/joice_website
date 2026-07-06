@@ -22,7 +22,7 @@ import anthropic
 import requests
 
 from generate_post import (
-    MODEL, POST_SCHEMA, collect_text, load_config, load_style_guide,
+    MODEL, POST_SCHEMA, collect_text, load_config, load_effective_style_guide,
     stream_message, supabase_headers, validate,
 )
 
@@ -110,7 +110,7 @@ def main():
         print("rewrite queue is empty; nothing to do.")
         return
 
-    style_guide = load_style_guide()
+    style_guide = load_effective_style_guide(cfg)
     client = anthropic.Anthropic()
     failures = []
 
