@@ -1,2 +1,5 @@
 /review/*
   X-Robots-Tag: noindex, nofollow
+
+/.well-known/apple-app-site-association
+  Content-Type: application/json
