@@ -1,8 +1,10 @@
 # Joice blog pipeline
 
 Automated blog generation for joiceapp.com. Twice a day a GitHub Actions cron
-job researches a topic, writes an essay with real citations, and uploads it to
-**Supabase as a draft**. A human reviews the draft in the Supabase Table
+job picks an article format (essay, listicle, news commentary, question,
+myth-busting — weighted in `config.yml`, never the same format twice in a
+row), researches a topic to fit, writes the piece with real citations, and
+uploads it to **Supabase as a draft**. A human reviews the draft in the Supabase Table
 Editor and flips `status` to `published` — the website renders posts straight
 from the database, so publishing is **instant and requires no deploy or PR**.
 
@@ -30,7 +32,7 @@ from the database, so publishing is **instant and requires no deploy or PR**.
 | website rendering | `functions/blog/[[path]].js`, `functions/sitemap.xml.js`, `functions/llms.txt.js` + shared `functions-lib/blog.js` (Cloudflare Pages Functions, deployed with the site) |
 | generator | `pipeline/generate_post.py` (GitHub Actions cron, `.github/workflows/blog-generate.yml`) |
 | writer voice | `pipeline/style_guide.md` |
-| topic pillars + limits | `pipeline/config.yml` |
+| formats, topic pillars + limits | `pipeline/config.yml` |
 
 The Pages Functions read with the *publishable* key (safe to embed; row-level
 security exposes only `status = 'published'` rows). The generator writes with
@@ -82,8 +84,9 @@ is tasteful (1-2 links); title/description sensible for search.
 pip install -r pipeline/requirements.txt
 
 # needs ANTHROPIC_API_KEY; needs SUPABASE_SECRET_KEY unless --dry-run
-python3 pipeline/generate_post.py                     # auto topic -> draft
+python3 pipeline/generate_post.py                     # auto format+topic -> draft
 python3 pipeline/generate_post.py --topic "..."       # specific topic
+python3 pipeline/generate_post.py --format listicle   # specific format
 python3 pipeline/generate_post.py --dry-run out.json  # no upload, no keys
 ```
 
@@ -97,4 +100,4 @@ npx wrangler pages dev .    # serves static site + functions on :8788
 
 `.github/workflows/blog-generate.yml` runs at 13:07 and 22:07 UTC (~6am and
 ~3pm Pacific). Edit the two `cron:` lines to change cadence, or run on demand
-from the Actions tab (optionally with a topic override).
+from the Actions tab (optionally with topic and/or format overrides).

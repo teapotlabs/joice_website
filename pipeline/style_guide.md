@@ -21,14 +21,40 @@ lot — warm, specific, a little wry, never clinical and never preachy.
 
 ## Structure
 
+- Each piece comes with a format brief (essay, listicle, news commentary...).
+  Where the brief's structure conflicts with the rules below, the brief wins;
+  the voice rules always apply.
 - Open in the middle of something — a scene, a claim, a question the reader
   has actually asked themselves. Never open with "In today's fast-paced world"
   or a dictionary definition or "We've all been there."
 - Use only a few section headings (2-4), written like a person would say them,
-  lowercase, no title case. Not every essay needs headings at all.
-- No bullet-point listicles unless the piece genuinely is a list. Prose first.
+  lowercase, no title case. Not every essay needs headings at all. (Listicles
+  are the exception: one numbered heading per entry.)
+- No bullet-point listicles unless the format brief says the piece is a list.
+  Prose first.
 - End on a thought, an image, or a small challenge — not a summary of what the
   reader just read, and never a paragraph starting with "In conclusion".
+
+## Headlines
+
+The title decides whether anyone reads the rest. Accurate but forgettable is
+a fail — every piece needs a headline a stranger would click out of genuine
+curiosity.
+
+- Open a loop the reader needs closed: "the journaling advice that keeps you
+  stuck", "what your unsent texts are trying to tell you".
+- Unexpected specificity beats vague promise — numbers, timeframes, named
+  feelings. "why you rehearse arguments in the shower" beats "understanding
+  overthinking".
+- For listicles, the number leads: "7 journaling prompts that make you think".
+- A confident, slightly contrarian claim earns the click: "venting might be
+  making you angrier".
+- Questions work when they're the reader's own question, word for word.
+- Never bait-and-switch: the piece must fully deliver what the title promises,
+  or the reader won't trust the next one.
+- Still lowercase, still plain words people actually search, still ~60
+  characters max.
+- Draft five candidates, keep the one you'd click at 11pm.
 
 ## Banned tells (hard rules)
 
@@ -70,9 +96,9 @@ Never use these words/patterns — they mark text as AI-written:
 
 ## SEO (without smelling like SEO)
 
-- The title states the essay's actual promise in plain language people search
-  for. Lowercase, like the rest of the site. No colons-with-clever-subtitle
-  unless it truly helps. Max ~60 characters.
+- The title follows the headlines section above: curiosity first, built from
+  plain language people actually search. No colons-with-clever-subtitle
+  unless it truly helps.
 - The meta description (the `description` field) is one or two sentences, ~150
   characters, written like the first line of a good email.
 - Work the natural key phrases into the first two paragraphs because that's

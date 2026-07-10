@@ -22,8 +22,9 @@ import anthropic
 import requests
 
 from generate_post import (
-    MODEL, POST_SCHEMA, collect_text, load_config, load_effective_style_guide,
-    stream_message, supabase_headers, validate,
+    MODEL, POST_SCHEMA, collect_text, format_by_key, format_limits,
+    format_section, load_config, load_effective_style_guide, stream_message,
+    supabase_headers, validate,
 )
 
 
@@ -31,7 +32,8 @@ def fetch_rewrite_queue(cfg):
     r = requests.get(
         cfg["supabase_url"] + "/rest/v1/posts",
         params={
-            "select": "id,slug,title,description,body_md,tags,sources,review_notes",
+            "select": "id,slug,title,description,body_md,tags,sources,"
+                      "review_notes,format",
             "status": "eq.rewrite_requested",
         },
         headers=supabase_headers(cfg),
@@ -41,7 +43,7 @@ def fetch_rewrite_queue(cfg):
     return r.json()
 
 
-def run_rewrite(client, cfg, style_guide, post, feedback=None):
+def run_rewrite(client, cfg, style_guide, post, fmt, feedback=None):
     current = {
         "title": post["title"],
         "slug": post["slug"],
@@ -52,22 +54,25 @@ def run_rewrite(client, cfg, style_guide, post, feedback=None):
     }
     prompt = (
         "You are the editor for the blog of {site}. The human reviewer read the "
-        "essay below and requested a rewrite. Their notes are the brief — "
+        "piece below and requested a rewrite. Their notes are the brief — "
         "address every point in them.\n\n"
         "REVIEWER NOTES (mandatory direction):\n{notes}\n\n"
-        "STYLE GUIDE (still applies in full):\n{style}\n\n"
-        "CURRENT ESSAY:\n{current}\n\n"
+        "STYLE GUIDE (still applies in full):\n{style}\n"
+        "{format_section}\n"
+        "CURRENT PIECE:\n{current}\n\n"
         "{feedback}"
         "Rules for the rewrite:\n"
         "- Address the reviewer's notes above everything else.\n"
+        "- Keep the piece's format unless the notes say otherwise.\n"
         "- Keep the slug exactly '{slug}'.\n"
-        "- Cite only URLs already present in the essay's body or sources list — "
+        "- Cite only URLs already present in the piece's body or sources list — "
         "never invent a new source, statistic, or study finding.\n"
         "- Keep Joice mentioned once or twice, linking to {app_url}.\n"
-        "- Keep the essay between {min_words} and {max_words} words.\n\n"
-        "Return the full rewritten essay in the same JSON shape."
+        "- Keep the piece between {min_words} and {max_words} words.\n\n"
+        "Return the full rewritten piece in the same JSON shape."
     ).format(site=cfg["site_name"], notes=post.get("review_notes") or "(none provided)",
-             style=style_guide, current=json.dumps(current, indent=2),
+             style=style_guide, format_section=format_section(fmt),
+             current=json.dumps(current, indent=2),
              feedback=("PREVIOUS VALIDATION FAILURE — you must fix this: {}\n\n".format(feedback)
                        if feedback else ""),
              slug=post["slug"], app_url=cfg["app_store_url"],
@@ -116,15 +121,17 @@ def main():
 
     for post in queue:
         print("rewriting '{}' ({})...".format(post["title"], post["slug"]), flush=True)
-        rewritten = run_rewrite(client, cfg, style_guide, post)
+        fmt = format_by_key(cfg, post.get("format"))
+        eff = format_limits(cfg, fmt)
+        rewritten = run_rewrite(client, eff, style_guide, post, fmt)
         rewritten["slug"] = post["slug"]  # never allow slug drift
-        problems = validate(rewritten, cfg)
+        problems = validate(rewritten, eff)
         if problems:
             print("  validation failed, retrying: {}".format("; ".join(problems)), flush=True)
-            rewritten = run_rewrite(client, cfg, style_guide, post,
+            rewritten = run_rewrite(client, eff, style_guide, post, fmt,
                                     feedback="; ".join(problems))
             rewritten["slug"] = post["slug"]
-            problems = validate(rewritten, cfg)
+            problems = validate(rewritten, eff)
         if problems:
             failures.append((post["slug"], problems))
             print("  FAILED validation twice; leaving in queue.", file=sys.stderr)

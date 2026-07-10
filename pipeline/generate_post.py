@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Generate one blog post for joiceapp.com and upload it to Supabase.
 
-Three-phase pipeline against the Claude API:
-  1. research — pick a fresh topic (or use --topic) and gather real sources
-     via the server-side web search tool
-  2. draft    — write the essay following the style guide, citing only
-     researched sources
+Each run first picks an article format (essay, listicle, news commentary,
+question, myth busting — weighted in config.yml, never repeating the previous
+post's format; override with --format), then runs a three-phase pipeline
+against the Claude API:
+  1. research — pick a fresh topic fitting the format (or use --topic) and
+     gather real sources via the server-side web search tool
+  2. draft    — write the piece following the style guide + format brief,
+     citing only researched sources
   3. polish   — an editor pass that hunts AI tells, verifies citation use,
-     and enforces the 1-2 Joice plugs
+     pressure-tests the headline, and enforces the 1-2 Joice plugs
 
 Delivery: the finished post is INSERTed into the Supabase `posts` table as a
 draft. A human reviews it in the Supabase Table Editor and flips `status` to
@@ -22,6 +25,7 @@ Environment:
 import argparse
 import json
 import os
+import random
 import re
 import sys
 from pathlib import Path
@@ -37,7 +41,7 @@ MODEL = "claude-opus-4-8"
 POST_SCHEMA = {
     "type": "object",
     "properties": {
-        "title": {"type": "string", "description": "Lowercase, plain-language, <=60 chars"},
+        "title": {"type": "string", "description": "Lowercase, curiosity-making headline, <=60 chars"},
         "slug": {"type": "string", "description": "kebab-case url slug"},
         "description": {"type": "string", "description": "~150 char meta description"},
         "tags": {"type": "array", "items": {"type": "string"}},
@@ -91,6 +95,46 @@ def load_effective_style_guide(cfg):
                 rows[0]["version"], rows[0]["content"]))
 
 
+# ------------------------------------------------------------- formats
+
+def format_by_key(cfg, key):
+    return next((f for f in cfg.get("formats") or [] if f["key"] == key), None)
+
+
+def pick_format(cfg, override=None, last_format=None):
+    """Choose this run's article format: weighted random over cfg['formats'],
+    never repeating the most recent post's format back-to-back."""
+    formats = cfg.get("formats") or []
+    if not formats:
+        return None
+    if override:
+        fmt = format_by_key(cfg, override)
+        if not fmt:
+            sys.exit("unknown format '{}'; known: {}".format(
+                override, ", ".join(f["key"] for f in formats)))
+        return fmt
+    pool = [f for f in formats if f["key"] != last_format] or formats
+    return random.choices(pool, weights=[f.get("weight", 1) for f in pool])[0]
+
+
+def format_limits(cfg, fmt):
+    """Config copy with the format's word/source overrides applied."""
+    eff = dict(cfg)
+    for key in ("min_words", "max_words", "min_sources"):
+        if fmt and key in fmt:
+            eff[key] = fmt[key]
+    return eff
+
+
+def format_section(fmt):
+    """Prompt block describing this piece's format, for all three passes."""
+    if not fmt:
+        return ""
+    return ("\nFORMAT for this piece — {key}. Where this brief conflicts with "
+            "the style guide's structure rules, the brief wins:\n{brief}\n"
+            .format(key=fmt["key"], brief=fmt["brief"].strip()))
+
+
 # ------------------------------------------------------------- supabase i/o
 
 def supabase_headers(cfg):
@@ -105,14 +149,15 @@ def supabase_headers(cfg):
 
 
 def existing_posts(cfg):
-    """All posts (drafts included) for topic dedupe + slug uniqueness."""
+    """All posts (drafts included), newest first, for topic dedupe, slug
+    uniqueness, and last-format avoidance."""
     if not os.environ.get("SUPABASE_SECRET_KEY"):
         print("warning: SUPABASE_SECRET_KEY unset; skipping topic dedupe",
               file=sys.stderr)
         return []
     r = requests.get(
         cfg["supabase_url"] + "/rest/v1/posts",
-        params={"select": "slug,title,tags"},
+        params={"select": "slug,title,tags,format", "order": "created_at.desc"},
         headers=supabase_headers(cfg),
         timeout=30,
     )
@@ -151,7 +196,7 @@ def unique_slug(slug, taken):
     return candidate
 
 
-def insert_draft(cfg, post, taken_slugs):
+def insert_draft(cfg, post, taken_slugs, fmt=None):
     row = {
         "slug": unique_slug(post["slug"], taken_slugs),
         "title": post["title"],
@@ -160,6 +205,7 @@ def insert_draft(cfg, post, taken_slugs):
         "tags": post["tags"],
         "sources": post["sources"],
         "status": "draft",
+        "format": fmt["key"] if fmt else None,
     }
     r = requests.post(
         cfg["supabase_url"] + "/rest/v1/posts",
@@ -182,11 +228,13 @@ def stream_message(client, **kwargs):
         return stream.get_final_message()
 
 
-def run_research(client, cfg, topic_override):
+def run_research(client, cfg, topic_override, fmt, existing):
     """Web-search research pass. Returns a research brief (markdown/text)."""
-    existing = existing_posts(cfg)
     covered = "\n".join(
-        "- {} (tags: {})".format(p.get("title", "?"), ", ".join(p.get("tags") or []))
+        "- {}{} (tags: {})".format(
+            p.get("title", "?"),
+            " [{}]".format(p["format"]) if p.get("format") else "",
+            ", ".join(p.get("tags") or []))
         for p in existing
     ) or "- (none yet — this is the first post)"
 
@@ -195,8 +243,9 @@ def run_research(client, cfg, topic_override):
     else:
         pillars = "\n".join("- " + p for p in cfg["pillars"])
         topic_instruction = (
-            "First, pick ONE specific, searchable topic for a new essay. It must sit "
-            "inside these content pillars:\n{}\n\n"
+            "First, pick ONE specific, searchable topic that fits this piece's "
+            "format (described below). It must sit inside these content "
+            "pillars:\n{}\n\n"
             "It must NOT overlap with anything already covered:\n{}\n\n"
             "Prefer a specific angle over a broad survey (e.g. 'why you rehearse "
             "conversations in the shower' beats 'the benefits of self-reflection'). "
@@ -205,11 +254,14 @@ def run_research(client, cfg, topic_override):
 
     prompt = (
         "You are the researcher for the blog of {site} ({blurb}).\n\n"
-        "{topic_instruction}\n\n"
+        "{topic_instruction}\n"
+        "{format_section}\n"
         "Then research it with web search. Find 4-8 high-quality sources: "
         "peer-reviewed studies, university write-ups, or reputable publications. "
         "For every source record the exact title, publisher, working URL, and the "
-        "specific claim it supports. Prefer primary sources and named researchers.\n\n"
+        "specific claim it supports. Prefer primary sources and named researchers. "
+        "Gather whatever the format needs — e.g. enough real, distinct items to "
+        "fill a list piece, or the primary document behind a news piece.\n\n"
         "Return a research brief containing:\n"
         "1. TOPIC: the chosen topic and angle in one sentence\n"
         "2. WHY NOW: why readers search for / care about this\n"
@@ -219,7 +271,7 @@ def run_research(client, cfg, topic_override):
         "Only include URLs that appeared in your actual search results. Never invent "
         "a URL, a statistic, or a study finding."
     ).format(site=cfg["site_name"], blurb=cfg["brand_blurb"].strip(),
-             topic_instruction=topic_instruction)
+             topic_instruction=topic_instruction, format_section=format_section(fmt))
 
     messages = [{"role": "user", "content": prompt}]
     for _ in range(6):
@@ -238,23 +290,27 @@ def run_research(client, cfg, topic_override):
     return collect_text(response)
 
 
-def run_draft(client, cfg, style_guide, research_brief, standing_feedback=""):
+def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback=""):
     prompt = (
-        "You write essays for the blog of {site}. Brand context: {blurb}\n\n"
+        "You write for the blog of {site}. Brand context: {blurb}\n\n"
         "STYLE GUIDE (follow it exactly):\n{style}\n"
+        "{format_section}"
         "{standing_feedback}\n"
         "RESEARCH BRIEF (cite only these sources; never invent facts or URLs):\n"
         "{research}\n\n"
-        "Write the full essay now. Requirements:\n"
+        "Write the full piece now. Requirements:\n"
         "- {min_words}-{max_words} words\n"
         "- every factual claim carries an inline markdown link to its source from "
         "the brief\n"
         "- mention Joice exactly once or twice, each time linking to "
         "{app_url} — natural asides, not ads\n"
-        "- title lowercase, <=60 chars; slug kebab-case; description ~150 chars\n"
+        "- title: draft five candidates per the style guide's headlines section, "
+        "output only the one a stranger would click; lowercase, <=60 chars\n"
+        "- slug kebab-case; description ~150 chars\n"
         "- body_markdown must not repeat the title as a heading"
     ).format(site=cfg["site_name"], blurb=cfg["brand_blurb"].strip(),
              style=style_guide, research=research_brief,
+             format_section=format_section(fmt),
              standing_feedback=standing_feedback,
              min_words=cfg["min_words"], max_words=cfg["max_words"],
              app_url=cfg["app_store_url"])
@@ -270,12 +326,13 @@ def run_draft(client, cfg, style_guide, research_brief, standing_feedback=""):
     return json.loads(collect_text(response))
 
 
-def run_polish(client, cfg, style_guide, research_brief, draft, feedback=None,
+def run_polish(client, cfg, style_guide, research_brief, draft, fmt, feedback=None,
                standing_feedback=""):
     prompt = (
-        "You are the editor for the blog of {site}. Below is a draft essay as JSON, "
+        "You are the editor for the blog of {site}. Below is a draft piece as JSON, "
         "the research brief it must stay grounded in, and the style guide.\n\n"
         "STYLE GUIDE:\n{style}\n"
+        "{format_section}"
         "{standing_feedback}\n"
         "RESEARCH BRIEF:\n{research}\n\n"
         "DRAFT:\n{draft}\n\n"
@@ -287,11 +344,17 @@ def run_polish(client, cfg, style_guide, research_brief, draft, feedback=None,
         "Remove or rewrite any claim whose source isn't there.\n"
         "3. Ensure Joice is mentioned exactly once or twice with the link {app_url}, "
         "reading as a natural aside.\n"
-        "4. Tighten the opening; cut throat-clearing; make the ending land.\n"
-        "5. Keep the essay between {min_words} and {max_words} words.\n\n"
-        "Return the final essay in the same JSON shape, with the sources array "
+        "4. Confirm the piece actually delivers its format brief — don't flatten "
+        "a list into prose or strip the opinion out of a commentary.\n"
+        "5. Pressure-test the title against the style guide's headlines section: "
+        "would a stranger click it? If it's merely accurate, rewrite it until "
+        "it's curious — without over-promising.\n"
+        "6. Tighten the opening; cut throat-clearing; make the ending land.\n"
+        "7. Keep the piece between {min_words} and {max_words} words.\n\n"
+        "Return the final piece in the same JSON shape, with the sources array "
         "listing only sources actually linked in the body."
     ).format(site=cfg["site_name"], style=style_guide, research=research_brief,
+             format_section=format_section(fmt),
              draft=json.dumps(draft, indent=2),
              feedback=("PREVIOUS VALIDATION FAILURE — you must fix this: {}\n\n".format(feedback)
                        if feedback else ""),
@@ -353,6 +416,8 @@ def validate(post, cfg):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--topic", help="Override automatic topic selection")
+    parser.add_argument("--format", help="Override automatic format selection "
+                                         "(a key from config.yml formats)")
     parser.add_argument("--dry-run", metavar="OUT.json",
                         help="Write the finished post to a JSON file instead "
                              "of uploading it to Supabase")
@@ -362,8 +427,16 @@ def main():
     style_guide = load_effective_style_guide(cfg)
     client = anthropic.Anthropic()
 
+    existing = existing_posts(cfg)
+    last_format = existing[0].get("format") if existing else None
+    fmt = pick_format(cfg, args.format, last_format)
+    if fmt:
+        print("format: {} (previous post: {})".format(
+            fmt["key"], last_format or "unknown"), flush=True)
+        cfg = format_limits(cfg, fmt)
+
     print("[1/3] researching...", flush=True)
-    research_brief = run_research(client, cfg, args.topic)
+    research_brief = run_research(client, cfg, args.topic, fmt, existing)
     print(research_brief[:600], "...\n", flush=True)
 
     standing = reviewer_feedback(cfg)
@@ -372,19 +445,19 @@ def main():
             standing.count("\n- on ")), flush=True)
 
     print("[2/3] drafting...", flush=True)
-    draft = run_draft(client, cfg, style_guide, research_brief, standing)
+    draft = run_draft(client, cfg, style_guide, research_brief, fmt, standing)
     print("draft: {!r} ({} words)".format(
         draft["title"], len(draft["body_markdown"].split())), flush=True)
 
     print("[3/3] polishing...", flush=True)
-    post = run_polish(client, cfg, style_guide, research_brief, draft,
+    post = run_polish(client, cfg, style_guide, research_brief, draft, fmt,
                       standing_feedback=standing)
 
     problems = validate(post, cfg)
     if problems:
         print("validation failed, retrying polish with feedback:\n  " +
               "\n  ".join(problems), flush=True)
-        post = run_polish(client, cfg, style_guide, research_brief, post,
+        post = run_polish(client, cfg, style_guide, research_brief, post, fmt,
                           feedback="; ".join(problems), standing_feedback=standing)
         problems = validate(post, cfg)
 
@@ -398,11 +471,11 @@ def main():
         with open(args.dry_run, "w") as f:
             json.dump(post, f, indent=2, ensure_ascii=False)
         print("dry run: wrote {} (not uploaded)".format(args.dry_run))
-        print("title: {}".format(post["title"]))
+        print("title: {} [{}]".format(post["title"], fmt["key"] if fmt else "-"))
         return
 
     taken = {p["slug"] for p in existing_posts(cfg)}
-    row = insert_draft(cfg, post, taken)
+    row = insert_draft(cfg, post, taken, fmt)
     print("uploaded draft '{}' (slug: {})".format(row["title"], row["slug"]))
     print("review + publish: flip status to 'published' in the Supabase Table "
           "Editor and it is live immediately.")
@@ -414,6 +487,7 @@ def main():
             f.write(
                 "## Draft ready for review\n\n"
                 "**{title}**\n\n{desc}\n\n"
+                "- format: {fmt}\n"
                 "- slug: `{slug}`\n"
                 "- tags: {tags}\n"
                 "- sources: {nsources}\n\n"
@@ -422,6 +496,7 @@ def main():
                 "`status` to `published` to make it live at "
                 "{site}/blog/{slug}/\n".format(
                     title=row["title"], desc=row["description"], slug=row["slug"],
+                    fmt=fmt["key"] if fmt else "-",
                     tags=", ".join(post["tags"]), nsources=len(post["sources"]),
                     ref=cfg["supabase_url"].split("//")[1].split(".")[0],
                     site=cfg["site_url"]))

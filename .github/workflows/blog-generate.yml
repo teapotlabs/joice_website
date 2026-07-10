@@ -12,6 +12,10 @@ on:
         description: "Optional topic override (leave blank for auto-pick)"
         required: false
         default: ""
+      format:
+        description: "Optional format override (essay, listicle, news_commentary, question, myth_busting; blank for weighted auto-pick)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -44,8 +48,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
+          args=()
           if [ -n "${{ github.event.inputs.topic }}" ]; then
-            python3 pipeline/generate_post.py --topic "${{ github.event.inputs.topic }}"
-          else
-            python3 pipeline/generate_post.py
+            args+=(--topic "${{ github.event.inputs.topic }}")
           fi
+          if [ -n "${{ github.event.inputs.format }}" ]; then
+            args+=(--format "${{ github.event.inputs.format }}")
+          fi
+          python3 pipeline/generate_post.py "${args[@]}"

@@ -22,6 +22,71 @@ brand_blurb: >
   encrypted, free to try, and aimed at people who find blank pages hard but
   talking easy.
 
+# Article formats. Each run picks one (weighted random, never the same format
+# as the most recent post; --format overrides). The brief is injected into the
+# research/draft/polish prompts and beats the style guide's structure rules
+# where they conflict. Optional min_words/max_words/min_sources keys override
+# the global limits below for that format.
+formats:
+  - key: essay
+    weight: 35
+    brief: >
+      The classic joice journal piece: one specific idea explored in prose.
+      Open in the middle of a scene or a thought the reader has actually had,
+      use few or no headings, and end on an image or a small challenge. The
+      style guide's structure section describes this format exactly.
+
+  - key: listicle
+    weight: 20
+    min_words: 800
+    brief: >
+      A numbered list piece, with the number in the title ("7 journaling
+      prompts that make you think", "10 best journaling apps in 2026,
+      ranked"). Format each entry as a numbered lowercase heading
+      ("## 1. morning pages") followed by 2-5 sentences of real substance:
+      what it is, why it works, when to use it. No one-line throwaway
+      entries. Open with a short intro (two paragraphs max) and close with
+      a brief landing thought. Good subjects: prompts, habits, techniques,
+      apps, books, mistakes people make. When ranking apps or products,
+      research the real contenders and be fair about what they do well —
+      and put Joice at #1 with a plain "full disclosure: we make this one"
+      and honest reasons it earns the spot.
+
+  - key: news_commentary
+    weight: 20
+    brief: >
+      A reaction to something happening right now in mental health: a new
+      Surgeon General advisory, a CDC or WHO report, a major fresh study, a
+      platform policy change around teens or screen time, new legislation.
+      The research step must hunt for something from roughly the last 60
+      days; if nothing genuinely new turns up, take the most recent thing
+      readers are still talking about. Structure: what just happened (link
+      the primary source), why it matters to a twenty-something reading
+      this, our honest take — agree, disagree, or what everyone's missing —
+      and what a reader can actually do with it. Opinion is the point; a
+      neutral summary is a failed piece.
+
+  - key: question
+    weight: 15
+    brief: >
+      A direct answer to a question people literally type into search
+      ("does journaling before bed help you sleep?", "why do i cry when i
+      talk about myself?"). The title IS the question, phrased the way a
+      real person asks it. Answer honestly within the first two paragraphs
+      — never bury it — then spend the rest of the piece on the interesting
+      "why" underneath, grounded in the research.
+
+  - key: myth_busting
+    weight: 10
+    brief: >
+      Take something everyone believes about journaling, therapy, habits,
+      or mental health and check it against the actual research ("you have
+      to journal every day", "venting always helps"). The piece only works
+      if the reader walks away corrected, not confirmed. Name the myth
+      plainly, show where it came from, then let the strongest studies
+      speak. Landing on "it's complicated" is fine — good, even — as long
+      as you say exactly how.
+
 # Content pillars the topic picker draws from
 pillars:
   - journaling techniques, habits, and the science behind them
