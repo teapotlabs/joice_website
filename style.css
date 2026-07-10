@@ -358,12 +358,6 @@ nav {
     margin-bottom: 16px;
 }
 
-.hero-note {
-    font-size: 13.5px;
-    color: rgba(255, 254, 247, 0.92);
-    text-shadow: 0 1px 12px rgba(82, 97, 143, 0.55);
-}
-
 /* staggered load-in */
 .hero-content > * {
     opacity: 0;
@@ -820,12 +814,6 @@ nav {
     color: var(--ink-soft);
     max-width: 460px;
     margin: 0 auto;
-}
-
-.cta-note {
-    margin-top: 18px;
-    font-size: 13.5px;
-    color: rgba(62, 86, 81, 0.6);
 }
 
 /* =====================================================

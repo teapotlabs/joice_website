@@ -11,7 +11,7 @@ export const SUPABASE_KEY = "sb_publishable_DWplZMwp3dt_50oX6aCoXA_fJ0H0rT2";
 export const APP_STORE_URL = "https://apps.apple.com/us/app/joice-journal-by-conversation/id6759027458";
 export const BLOG_TITLE = "the joice journal";
 export const BLOG_DESC = "Essays on journaling, mental health, and finding your way — from the makers of Joice, the voice journal that talks back.";
-export const BRAND_BLURB = "Joice is an iOS voice-journaling app. You talk out loud about whatever is on your mind and an AI companion listens like a friend — asking gentle follow-up questions, never giving unsolicited advice. Entries are transcribed and searchable, recurring life themes are surfaced over time, and each week Joice writes you a warm reflection on what you talked about. It is private and encrypted, free to try, and aimed at people who find blank pages hard but talking easy.";
+export const BRAND_BLURB = "Joice is an iOS voice-journaling app. You talk out loud about whatever is on your mind and an AI companion listens like a friend — asking gentle follow-up questions, never giving unsolicited advice. Entries are transcribed and searchable, recurring life themes are surfaced over time, and each week Joice writes you a warm reflection on what you talked about. It is private and encrypted, and aimed at people who find blank pages hard but talking easy.";
 
 const LIST_FIELDS = "slug,title,description,tags,sources,body_md,published_at";
 

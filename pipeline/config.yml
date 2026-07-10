@@ -19,8 +19,7 @@ brand_blurb: >
   questions, never giving unsolicited advice. Entries are transcribed and
   searchable, recurring life themes are surfaced over time, and each week Joice
   writes you a warm reflection on what you talked about. It is private and
-  encrypted, free to try, and aimed at people who find blank pages hard but
-  talking easy.
+  encrypted, and aimed at people who find blank pages hard but talking easy.
 
 # Article formats. Each run picks one (weighted random, never the same format
 # as the most recent post; --format overrides). The brief is injected into the
