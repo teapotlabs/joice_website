@@ -1,0 +1,54 @@
+name: Detector feasibility eval
+
+# One-off experiment (manual only): score published posts against Pangram and
+# test whether humanize rewrite passes can move the score. Results land in the
+# job summary; full JSON (including rewritten drafts) uploads as an artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      rewrite_posts:
+        description: "How many top-scoring posts to rewrite-test (0 = baseline only)"
+        required: false
+        default: "2"
+      passes:
+        description: "Max humanize passes per post"
+        required: false
+        default: "2"
+      limit:
+        description: "How many recent published posts to score"
+        required: false
+        default: "12"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Score posts against Pangram
+        env:
+          PANGRAM_API_KEY: ${{ secrets.PANGRAM_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cd pipeline
+          python3 detector_eval.py --baseline \
+            --rewrite-test "${{ github.event.inputs.rewrite_posts }}" \
+            --passes "${{ github.event.inputs.passes }}" \
+            --limit "${{ github.event.inputs.limit }}" \
+            --out ../detector_eval_results.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: detector-eval-results
+          path: detector_eval_results.json
