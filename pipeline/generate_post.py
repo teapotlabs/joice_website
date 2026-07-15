@@ -38,7 +38,10 @@ import yaml
 
 PIPELINE_DIR = Path(__file__).resolve().parent
 
-MODEL = "claude-opus-4-8"
+# Research (topic hunting + web search) and guidance distilling run on Opus;
+# all reader-facing prose (draft, polish, rewrites) is written by Fable.
+RESEARCH_MODEL = "claude-opus-4-8"
+WRITER_MODEL = "claude-fable-5"
 
 POST_SCHEMA = {
     "type": "object",
@@ -219,6 +222,19 @@ def insert_draft(cfg, post, taken_slugs, fmt=None):
     return r.json()[0]
 
 
+def save_research(cfg, post_id, research_brief):
+    """Archive the research pass output alongside the draft (post_research
+    table; service-role only, not exposed to the public site)."""
+    r = requests.post(
+        cfg["supabase_url"] + "/rest/v1/post_research",
+        headers=supabase_headers(cfg),
+        json={"post_id": post_id, "research_md": research_brief,
+              "model": RESEARCH_MODEL},
+        timeout=30,
+    )
+    r.raise_for_status()
+
+
 # ------------------------------------------------------------- generation
 
 def collect_text(message):
@@ -304,7 +320,7 @@ def run_research(client, cfg, topic_override, fmt, existing):
     for _ in range(6):
         response = stream_message(
             client,
-            model=MODEL,
+            model=RESEARCH_MODEL,
             max_tokens=20000,
             thinking={"type": "adaptive"},
             tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 10}],
@@ -344,7 +360,7 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
 
     response = stream_message(
         client,
-        model=MODEL,
+        model=WRITER_MODEL,
         max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": POST_SCHEMA}},
@@ -391,7 +407,7 @@ def run_polish(client, cfg, style_guide, research_brief, draft, fmt, feedback=No
 
     response = stream_message(
         client,
-        model=MODEL,
+        model=WRITER_MODEL,
         max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": POST_SCHEMA}},
@@ -496,13 +512,15 @@ def main():
 
     if args.dry_run:
         with open(args.dry_run, "w") as f:
-            json.dump(post, f, indent=2, ensure_ascii=False)
+            json.dump({**post, "research_markdown": research_brief},
+                      f, indent=2, ensure_ascii=False)
         print("dry run: wrote {} (not uploaded)".format(args.dry_run))
         print("title: {} [{}]".format(post["title"], fmt["key"] if fmt else "-"))
         return
 
     taken = {p["slug"] for p in existing_posts(cfg)}
     row = insert_draft(cfg, post, taken, fmt)
+    save_research(cfg, row["id"], research_brief)
     print("uploaded draft '{}' (slug: {})".format(row["title"], row["slug"]))
     print("review + publish: flip status to 'published' in the Supabase Table "
           "Editor and it is live immediately.")

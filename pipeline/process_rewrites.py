@@ -22,7 +22,7 @@ import anthropic
 import requests
 
 from generate_post import (
-    MODEL, POST_SCHEMA, collect_text, format_by_key, format_limits,
+    POST_SCHEMA, WRITER_MODEL, collect_text, format_by_key, format_limits,
     format_section, load_config, load_effective_style_guide, stream_message,
     supabase_headers, validate,
 )
@@ -80,7 +80,7 @@ def run_rewrite(client, cfg, style_guide, post, fmt, feedback=None):
 
     response = stream_message(
         client,
-        model=MODEL,
+        model=WRITER_MODEL,
         max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": POST_SCHEMA}},

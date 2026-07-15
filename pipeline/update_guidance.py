@@ -26,7 +26,7 @@ import anthropic
 import requests
 
 from generate_post import (
-    MODEL, collect_text, load_config, load_style_guide, stream_message,
+    RESEARCH_MODEL, collect_text, load_config, load_style_guide, stream_message,
     supabase_headers,
 )
 
@@ -126,7 +126,7 @@ def distill(client, cfg, current_content, notes):
 
     response = stream_message(
         client,
-        model=MODEL,
+        model=RESEARCH_MODEL,
         max_tokens=8000,
         thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": GUIDANCE_SCHEMA}},

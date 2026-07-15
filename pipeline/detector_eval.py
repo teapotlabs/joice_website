@@ -30,7 +30,7 @@ import time
 import requests
 
 from generate_post import (
-    MODEL, collect_text, load_config, load_style_guide, stream_message,
+    WRITER_MODEL, collect_text, load_config, load_style_guide, stream_message,
 )
 
 PANGRAM_BASE = "https://text.external-api.pangram.com"
@@ -139,7 +139,7 @@ def humanize(client, style_guide, body_md, result):
 
     response = stream_message(
         client,
-        model=MODEL,
+        model=WRITER_MODEL,
         max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": REWRITE_SCHEMA}},
