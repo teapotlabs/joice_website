@@ -28,9 +28,11 @@ import os
 import random
 import re
 import sys
+import time
 from pathlib import Path
 
 import anthropic
+import httpx
 import requests
 import yaml
 
@@ -223,9 +225,34 @@ def collect_text(message):
     return "\n".join(b.text for b in message.content if b.type == "text")
 
 
+# Waits between attempts: long enough to ride out an API brownout (both
+# scheduled runs lost on 2026-07-13/14 died on transient mid-stream errors
+# at peak-load hours). Total worst case ~3h10m, within the 6h job limit.
+RETRY_DELAYS = (600, 3600, 7200)
+
+
+def _is_retryable(exc):
+    # Mid-stream error events (e.g. overloaded_error) surface as
+    # APIStatusError carrying the original 200 response, so only true
+    # client errors are treated as permanent.
+    status = getattr(exc, "status_code", None)
+    if status is not None and 400 <= status < 500:
+        return status in (408, 429)
+    return True
+
+
 def stream_message(client, **kwargs):
-    with client.messages.stream(**kwargs) as stream:
-        return stream.get_final_message()
+    for attempt, delay in enumerate(RETRY_DELAYS + (None,), start=1):
+        try:
+            with client.messages.stream(**kwargs) as stream:
+                return stream.get_final_message()
+        except (anthropic.AnthropicError, httpx.HTTPError) as e:
+            if delay is None or not _is_retryable(e):
+                raise
+            print("API call failed ({}: {}); attempt {}/{}, retrying in {} min"
+                  .format(type(e).__name__, e, attempt, len(RETRY_DELAYS) + 1,
+                          delay // 60), flush=True)
+            time.sleep(delay)
 
 
 def run_research(client, cfg, topic_override, fmt, existing):
