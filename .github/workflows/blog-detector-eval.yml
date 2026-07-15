@@ -7,6 +7,10 @@ name: Detector feasibility eval
 on:
   workflow_dispatch:
     inputs:
+      detector:
+        description: "Detector to score against (pangram or gptzero)"
+        required: false
+        default: "pangram"
       rewrite_posts:
         description: "How many top-scoring posts to rewrite-test (0 = baseline only)"
         required: false
@@ -39,10 +43,12 @@ jobs:
       - name: Score posts against Pangram
         env:
           PANGRAM_API_KEY: ${{ secrets.PANGRAM_API_KEY }}
+          GPTZERO_API_KEY: ${{ secrets.GPTZERO_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           cd pipeline
           python3 detector_eval.py --baseline \
+            --detector "${{ github.event.inputs.detector }}" \
             --rewrite-test "${{ github.event.inputs.rewrite_posts }}" \
             --passes "${{ github.event.inputs.passes }}" \
             --limit "${{ github.event.inputs.limit }}" \

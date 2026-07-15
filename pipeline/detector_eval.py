@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
-"""Feasibility experiment: score blog posts against the Pangram AI detector.
+"""Feasibility experiment: score blog posts against an AI-text detector.
 
 Answers one question before we wire a detector gate into the pipeline: can a
-prompt-level "humanize" rewrite pass move Pangram's fraction_ai meaningfully,
-or is Claude-written prose pinned near 1.0 no matter what? (Pangram is the
-strictest commercial detector and is trained to resist paraphrase attacks, so
-this is not a given — see the AuthorMist paper, arXiv:2503.08716.)
+prompt-level "humanize" rewrite pass move the detector's AI score meaningfully,
+or is Claude-written prose pinned near 1.0 no matter what? (See the AuthorMist
+paper, arXiv:2503.08716.) Pangram is the stricter, paraphrase-robust detector;
+GPTZero sits closer to human perception and is the more realistic gate target.
 
 Modes:
+  --detector D         pangram (default) or gptzero
   --baseline           score the most recent published posts, no rewriting
   --rewrite-test N     also run humanize rewrite passes on the N highest-
                        scoring posts and report the score trajectory
 
 Environment:
-  PANGRAM_API_KEY      Pangram API key (always required)
-  ANTHROPIC_API_KEY    Claude API key (rewrite mode only)
+  PANGRAM_API_KEY / GPTZERO_API_KEY   key for the chosen --detector
+  ANTHROPIC_API_KEY                   Claude API key (rewrite mode only)
 
 Reads published posts with the publishable Supabase key (anon RLS), so no
 Supabase secret is needed. Nothing is written back to the database.
@@ -34,6 +35,8 @@ from generate_post import (
 )
 
 PANGRAM_BASE = "https://text.external-api.pangram.com"
+GPTZERO_BASE = "https://api.gptzero.me/v2"
+DETECTORS = ("pangram", "gptzero")
 
 # Publishable key — public by design (also shipped in functions-lib/blog.js);
 # RLS limits it to reading published rows.
@@ -73,8 +76,16 @@ def markdown_to_text(md):
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+# Each scorer returns a normalized dict so the rest of the file is
+# detector-agnostic:
+#   score    float  probability the text is AI (0-1); the gate metric
+#   verdict  str    detector's own short label
+#   detail   str    one-line human summary for logs
+#   flagged  list   worst passages, each {text, score, label}, worst first
+#   raw      dict   the full API response, archived to the results file
+
 def pangram_score(text, poll_seconds=3, timeout=180):
-    """Submit text to Pangram's async API and return the completed result."""
+    """Submit text to Pangram's async API; return the normalized result."""
     headers = {"x-api-key": os.environ["PANGRAM_API_KEY"],
                "Content-Type": "application/json"}
     r = requests.post(PANGRAM_BASE + "/task", headers=headers,
@@ -90,31 +101,70 @@ def pangram_score(text, poll_seconds=3, timeout=180):
         result = r.json()
         stage = result.get("stage")
         if stage == "STAGE_SUCCESS":
-            return result
+            break
         if stage == "STAGE_FAILED":
             raise RuntimeError("Pangram task {} failed: {}".format(task_id, result))
         time.sleep(poll_seconds)
-    raise RuntimeError("Pangram task {} timed out".format(task_id))
+    else:
+        raise RuntimeError("Pangram task {} timed out".format(task_id))
 
-
-def describe(result):
-    return "fraction_ai={:.2f} ai_assisted={:.2f} human={:.2f} verdict={}".format(
-        result.get("fraction_ai", -1), result.get("fraction_ai_assisted", -1),
-        result.get("fraction_human", -1), result.get("prediction_short", "?"))
-
-
-def worst_windows(result, n=5):
     windows = sorted(result.get("windows") or [],
                      key=lambda w: w.get("ai_assistance_score", 0), reverse=True)
-    return windows[:n]
+    return {
+        "score": result.get("fraction_ai", -1),
+        "verdict": result.get("prediction_short", "?"),
+        "detail": "fraction_ai={:.2f} ai_assisted={:.2f} human={:.2f} verdict={}"
+                  .format(result.get("fraction_ai", -1),
+                          result.get("fraction_ai_assisted", -1),
+                          result.get("fraction_human", -1),
+                          result.get("prediction_short", "?")),
+        "flagged": [{"text": w.get("text", ""),
+                     "score": w.get("ai_assistance_score", 0),
+                     "label": w.get("label", "?")}
+                    for w in windows[:5]],
+        "raw": result,
+    }
+
+
+def gptzero_score(text):
+    """Score text with GPTZero's synchronous API; return the normalized result.
+
+    completely_generated_prob is the document-level AI probability — the field
+    that maps to the '<50% chance of AI' gate."""
+    r = requests.post(
+        GPTZERO_BASE + "/predict/text",
+        headers={"x-api-key": os.environ["GPTZERO_API_KEY"],
+                 "Content-Type": "application/json"},
+        json={"document": text}, timeout=60,
+    )
+    r.raise_for_status()
+    doc = r.json()["documents"][0]
+    sentences = sorted(doc.get("sentences") or [],
+                       key=lambda s: s.get("generated_prob", 0), reverse=True)
+    return {
+        "score": doc.get("completely_generated_prob", -1),
+        "verdict": doc.get("predicted_class", "?"),
+        "detail": "completely_generated_prob={:.2f} predicted={} confidence={}"
+                  .format(doc.get("completely_generated_prob", -1),
+                          doc.get("predicted_class", "?"),
+                          doc.get("confidence_category", "?")),
+        "flagged": [{"text": s.get("sentence", ""),
+                     "score": s.get("generated_prob", 0),
+                     "label": "ai" if s.get("highlight_sentence_for_ai") else ""}
+                    for s in sentences[:5]],
+        "raw": doc,
+    }
+
+
+SCORERS = {"pangram": pangram_score, "gptzero": gptzero_score}
 
 
 def humanize(client, style_guide, body_md, result):
     flagged = "\n\n".join(
-        '- (AI score {:.2f}, {}) "{}"'.format(
-            w.get("ai_assistance_score", 0), w.get("label", "?"),
-            w.get("text", "")[:400])
-        for w in worst_windows(result))
+        '- (AI score {:.2f}{}) "{}"'.format(
+            w["score"], " " + w["label"] if w["label"] else "",
+            w["text"][:400])
+        for w in result["flagged"])
     prompt = (
         "You are a line editor. The piece below was flagged by an AI-text "
         "detector; the flagged passages are listed after it, worst first.\n\n"
@@ -172,76 +222,78 @@ def main():
                         help="How many recent published posts to score")
     parser.add_argument("--passes", type=int, default=2,
                         help="Max humanize passes per post in rewrite mode")
+    parser.add_argument("--detector", choices=DETECTORS, default="pangram",
+                        help="Which detector API to score against")
     parser.add_argument("--out", default="detector_eval_results.json",
                         help="Write full results (incl. rewrites) to this file")
     args = parser.parse_args()
 
-    if not os.environ.get("PANGRAM_API_KEY"):
-        sys.exit("PANGRAM_API_KEY is not set")
+    scorer = SCORERS[args.detector]
+    key_env = args.detector.upper() + "_API_KEY"
+    if not os.environ.get(key_env):
+        sys.exit("{} is not set".format(key_env))
     if not (args.baseline or args.rewrite_test):
         sys.exit("nothing to do: pass --baseline and/or --rewrite-test N")
 
     cfg = load_config()
     posts = fetch_published(cfg, args.limit)
-    print("scoring {} published posts against Pangram...".format(len(posts)),
-          flush=True)
+    print("scoring {} published posts against {}...".format(
+        len(posts), args.detector), flush=True)
 
     scored = []
     for p in posts:
-        result = pangram_score(markdown_to_text(p["body_md"]))
+        result = scorer(markdown_to_text(p["body_md"]))
         scored.append({"slug": p["slug"], "title": p["title"],
                        "body_md": p["body_md"], "result": result})
-        print("  {}: {}".format(p["slug"], describe(result)), flush=True)
+        print("  {}: {}".format(p["slug"], result["detail"]), flush=True)
 
-    fractions = [s["result"].get("fraction_ai", 0) for s in scored]
+    fractions = [s["result"]["score"] for s in scored]
     lines = [
-        "## Pangram baseline ({} posts)".format(len(scored)),
+        "## {} baseline ({} posts)".format(args.detector, len(scored)),
         "",
-        "| post | fraction_ai | ai_assisted | human | verdict |",
-        "|---|---|---|---|---|",
+        "| post | AI score | verdict |",
+        "|---|---|---|",
     ]
     for s in scored:
-        r = s["result"]
-        lines.append("| {} | {:.2f} | {:.2f} | {:.2f} | {} |".format(
-            s["slug"], r.get("fraction_ai", -1),
-            r.get("fraction_ai_assisted", -1), r.get("fraction_human", -1),
-            r.get("prediction_short", "?")))
-    lines += ["", "mean fraction_ai: **{:.2f}**, posts under 0.50: **{}/{}**"
+        lines.append("| {} | {:.2f} | {} |".format(
+            s["slug"], s["result"]["score"], s["result"]["verdict"]))
+    lines += ["", "mean AI score: **{:.2f}**, posts under 0.50: **{}/{}**"
               .format(sum(fractions) / len(fractions),
                       sum(1 for f in fractions if f < 0.5), len(fractions))]
     summarize(lines)
 
-    output = {"baseline": [{"slug": s["slug"], "result": s["result"]}
+    output = {"detector": args.detector,
+              "baseline": [{"slug": s["slug"], "result": s["result"]}
                            for s in scored]}
 
     if args.rewrite_test:
         import anthropic
         client = anthropic.Anthropic()
         style_guide = load_style_guide()
-        targets = sorted(scored, key=lambda s: s["result"].get("fraction_ai", 0),
+        targets = sorted(scored, key=lambda s: s["result"]["score"],
                          reverse=True)[:args.rewrite_test]
 
         lines = ["", "## Humanize rewrite trajectories", ""]
         output["rewrites"] = []
         for s in targets:
             body, result = s["body_md"], s["result"]
-            trajectory = [result.get("fraction_ai", -1)]
+            trajectory = [result["score"]]
             print("\nrewrite-testing {} (start {})".format(
-                s["slug"], describe(result)), flush=True)
+                s["slug"], result["detail"]), flush=True)
             versions = []
             for i in range(args.passes):
                 body = humanize(client, style_guide, body, result)
                 ok, dropped = links_preserved(s["body_md"], body)
-                result = pangram_score(markdown_to_text(body))
-                trajectory.append(result.get("fraction_ai", -1))
+                result = scorer(markdown_to_text(body))
+                trajectory.append(result["score"])
                 versions.append({"body_md": body, "result": result,
                                  "links_preserved": ok,
                                  "dropped_links": sorted(dropped)})
                 print("  pass {}: {}{}".format(
-                    i + 1, describe(result),
+                    i + 1, result["detail"],
                     "" if ok else "  [WARNING: dropped links: {}]".format(
                         ", ".join(sorted(dropped)))), flush=True)
-                if result.get("fraction_ai", 1) < 0.5:
+                if result["score"] < 0.5:
                     break
             lines.append("- `{}`: {}".format(
                 s["slug"], " → ".join("{:.2f}".format(f) for f in trajectory)))
