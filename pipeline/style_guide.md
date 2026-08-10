@@ -28,8 +28,10 @@ lot — warm, specific, a little wry, never clinical and never preachy.
   has actually asked themselves. Never open with "In today's fast-paced world"
   or a dictionary definition or "We've all been there."
 - Use only a few section headings (2-4), written like a person would say them,
-  lowercase, no title case. Not every essay needs headings at all. (Listicles
-  are the exception: one numbered heading per entry.)
+  in sentence case (capitalize the first word and proper nouns only — "The
+  Pennebaker effect", not "The Pennebaker Effect"). Not every essay needs
+  headings at all. (Listicles are the exception: one numbered heading per
+  entry.)
 - No bullet-point listicles unless the format brief says the piece is a list.
   Prose first.
 - End on a thought, an image, or a small challenge — not a summary of what the
@@ -41,19 +43,20 @@ The title decides whether anyone reads the rest. Accurate but forgettable is
 a fail — every piece needs a headline a stranger would click out of genuine
 curiosity.
 
-- Open a loop the reader needs closed: "the journaling advice that keeps you
-  stuck", "what your unsent texts are trying to tell you".
+- Open a loop the reader needs closed: "The Journaling Advice That Keeps You
+  Stuck", "What Your Unsent Texts Are Trying to Tell You".
 - Unexpected specificity beats vague promise — numbers, timeframes, named
-  feelings. "why you rehearse arguments in the shower" beats "understanding
-  overthinking".
-- For listicles, the number leads: "7 journaling prompts that make you think".
-- A confident, slightly contrarian claim earns the click: "venting might be
-  making you angrier".
+  feelings. "Why You Rehearse Arguments in the Shower" beats "Understanding
+  Overthinking".
+- For listicles, the number leads: "7 Journaling Prompts That Make You Think".
+- A confident, slightly contrarian claim earns the click: "Venting Might Be
+  Making You Angrier".
 - Questions work when they're the reader's own question, word for word.
 - Never bait-and-switch: the piece must fully deliver what the title promises,
   or the reader won't trust the next one.
-- Still lowercase, still plain words people actually search, still ~60
-  characters max.
+- Title Case (capitalize principal words; keep articles, conjunctions, and
+  short prepositions lowercase), plain words people actually search, still
+  ~60 characters max.
 - Draft five candidates, keep the one you'd click at 11pm.
 
 ## Banned tells (hard rules)

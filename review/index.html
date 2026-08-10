@@ -124,8 +124,10 @@
             border-radius: var(--radius-card); padding: 20px; margin-top: 10px;
         }
         .rv-preview h2 { font-size: 21px; margin: 22px 0 10px; }
-        .rv-preview h3 { font-family: var(--serif); text-transform: lowercase;
+        .rv-preview h3 { font-family: var(--serif);
             color: var(--fern); font-size: 17px; margin: 18px 0 8px; }
+        /* Post titles/headings use real capitalization now */
+        .rv-card h2, .rv-preview h2, .rv-preview h3 { text-transform: none; }
         .rv-preview p { margin-bottom: 14px; }
         .rv-preview a { color: var(--fern); }
         .rv-preview blockquote { border-left: 3px solid var(--sage);

@@ -39,10 +39,10 @@ formats:
     weight: 20
     min_words: 800
     brief: >
-      A numbered list piece, with the number in the title ("7 journaling
-      prompts that make you think", "10 best journaling apps in 2026,
-      ranked"). Format each entry as a numbered lowercase heading
-      ("## 1. morning pages") followed by 2-5 sentences of real substance:
+      A numbered list piece, with the number in the title ("7 Journaling
+      Prompts That Make You Think", "10 Best Journaling Apps in 2026,
+      Ranked"). Format each entry as a numbered sentence-case heading
+      ("## 1. Morning pages") followed by 2-5 sentences of real substance:
       what it is, why it works, when to use it. No one-line throwaway
       entries. Open with a short intro (two paragraphs max) and close with
       a brief landing thought. Good subjects: prompts, habits, techniques,
