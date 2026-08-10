@@ -1587,3 +1587,13 @@ a.blog-tag:hover { background: rgba(168, 179, 161, 0.35); }
     .footer-links { grid-template-columns: 1fr; gap: 26px; }
     .footer-col a { overflow-wrap: anywhere; }
 }
+
+/* Blog content displays real capitalization (Title Case titles, sentence-case
+   headings); site chrome and branding keep the lowercase aesthetic. */
+.blog-post-head h1,
+.blog-post-body h2,
+.blog-post-body h3,
+.blog-card h2,
+.blog-related .blog-card h3 {
+    text-transform: none;
+}

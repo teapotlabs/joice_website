@@ -57,7 +57,7 @@ WRITER_MODEL = "claude-fable-5"
 POST_SCHEMA = {
     "type": "object",
     "properties": {
-        "title": {"type": "string", "description": "Lowercase, curiosity-making headline, <=60 chars"},
+        "title": {"type": "string", "description": "Title Case, curiosity-making headline, <=60 chars"},
         "slug": {"type": "string", "description": "kebab-case url slug"},
         "description": {"type": "string", "description": "~150 char meta description"},
         "tags": {"type": "array", "items": {"type": "string"}},
@@ -504,7 +504,7 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
         "first two paragraphs — a reader (or an AI assistant quoting you) should "
         "be able to lift the gist without scrolling\n"
         "- title: draft five candidates per the style guide's headlines section, "
-        "output only the one a stranger would click; lowercase, <=60 chars\n"
+        "output only the one a stranger would click; Title Case, <=60 chars\n"
         "- slug kebab-case; description ~150 chars\n"
         "- body_markdown must not repeat the title as a heading"
     ).format(site=cfg["site_name"], blurb=cfg["brand_blurb"].strip(),
