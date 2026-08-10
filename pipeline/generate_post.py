@@ -12,10 +12,21 @@ against the Claude API:
   3. polish   — an editor pass that hunts AI tells, verifies citation use,
      pressure-tests the headline, and enforces the 1-2 Joice plugs
 
-Delivery: the finished post is INSERTed into the Supabase `posts` table as a
-draft. A human reviews it in the Supabase Table Editor and flips `status` to
-'published' — the website renders straight from the table, so publishing is
-instant and needs no deploy.
+Topic selection: if the active weekly SEO plan (seo_reports, written by
+seo_review.py on Sundays) has a pending topic, that topic is used and its
+suggested format is forced; otherwise the research pass free-picks a topic
+and the format is a weighted random draw. Every post records a one-sentence
+topic_rationale so next Sunday's plan can see why each piece was written.
+
+Delivery: the finished post is INSERTed into the Supabase `posts` table.
+When it passes validation it goes in as 'published' (auto_publish in
+config.yml; --draft overrides) and is live within ~5 minutes — the review
+console at joiceapp.com/review/ is for editing after the fact. Validation
+failures land as 'draft' for manual attention. New URLs are pinged to
+IndexNow and logged to seo_events.
+
+Model calls go through the Message Batches API (50% price of the regular
+API; the cron job has no latency requirement).
 
 Environment:
   ANTHROPIC_API_KEY      Claude API key
@@ -162,7 +173,8 @@ def existing_posts(cfg):
         return []
     r = requests.get(
         cfg["supabase_url"] + "/rest/v1/posts",
-        params={"select": "slug,title,tags,format", "order": "created_at.desc"},
+        params={"select": "slug,title,description,tags,format,status",
+                "order": "created_at.desc"},
         headers=supabase_headers(cfg),
         timeout=30,
     )
@@ -201,7 +213,8 @@ def unique_slug(slug, taken):
     return candidate
 
 
-def insert_draft(cfg, post, taken_slugs, fmt=None):
+def insert_post(cfg, post, taken_slugs, fmt=None, status="draft",
+                topic_rationale=None):
     row = {
         "slug": unique_slug(post["slug"], taken_slugs),
         "title": post["title"],
@@ -209,8 +222,9 @@ def insert_draft(cfg, post, taken_slugs, fmt=None):
         "body_md": post["body_markdown"].strip(),
         "tags": post["tags"],
         "sources": post["sources"],
-        "status": "draft",
+        "status": status,
         "format": fmt["key"] if fmt else None,
+        "topic_rationale": topic_rationale,
     }
     r = requests.post(
         cfg["supabase_url"] + "/rest/v1/posts",
@@ -220,6 +234,81 @@ def insert_draft(cfg, post, taken_slugs, fmt=None):
     )
     r.raise_for_status()
     return r.json()[0]
+
+
+def log_seo_event(cfg, post_id, slug, event, detail=None):
+    """Append to the seo_events change log (attribution for the Sunday job)."""
+    try:
+        requests.post(
+            cfg["supabase_url"] + "/rest/v1/seo_events",
+            headers=supabase_headers(cfg),
+            json={"post_id": post_id, "slug": slug, "event": event,
+                  "detail": (detail or "")[:500] or None},
+            timeout=30,
+        ).raise_for_status()
+    except requests.RequestException as e:
+        print("warning: seo_events log failed: {}".format(e), file=sys.stderr)
+
+
+def ping_indexnow(cfg, urls):
+    """Tell IndexNow-participating engines (Bing, DuckDuckGo, ...) about new
+    or changed URLs. Best-effort: never fails the run."""
+    key = cfg.get("indexnow_key")
+    if not key or not urls:
+        return
+    host = cfg["site_url"].split("//", 1)[-1]
+    try:
+        r = requests.post(
+            "https://api.indexnow.org/indexnow",
+            json={"host": host, "key": key,
+                  "keyLocation": "{}/{}.txt".format(cfg["site_url"], key),
+                  "urlList": urls},
+            timeout=30,
+        )
+        print("indexnow: {} for {} url(s)".format(r.status_code, len(urls)),
+              flush=True)
+    except requests.RequestException as e:
+        print("warning: indexnow ping failed: {}".format(e), file=sys.stderr)
+
+
+# ------------------------------------------------------- weekly SEO plan
+
+def fetch_plan_topic(cfg):
+    """First pending topic from the active weekly SEO plan, if any.
+    Returns (report_id, plan, index, topic) or None."""
+    if not os.environ.get("SUPABASE_SECRET_KEY"):
+        return None
+    r = requests.get(
+        cfg["supabase_url"] + "/rest/v1/seo_reports",
+        params={"select": "id,plan", "status": "eq.active",
+                "order": "created_at.desc", "limit": "1"},
+        headers=supabase_headers(cfg),
+        timeout=30,
+    )
+    r.raise_for_status()
+    rows = r.json()
+    if not rows:
+        return None
+    plan = rows[0].get("plan") or {}
+    for i, topic in enumerate(plan.get("topics") or []):
+        if topic.get("state", "pending") == "pending":
+            return rows[0]["id"], plan, i, topic
+    return None
+
+
+def mark_plan_topic(cfg, report_id, plan, index, state, post_id=None):
+    """Record a plan topic's outcome back onto the seo_reports row."""
+    plan["topics"][index]["state"] = state
+    if post_id:
+        plan["topics"][index]["post_id"] = post_id
+    r = requests.patch(
+        cfg["supabase_url"] + "/rest/v1/seo_reports",
+        params={"id": "eq." + report_id},
+        headers=supabase_headers(cfg),
+        json={"plan": plan},
+        timeout=30,
+    )
+    r.raise_for_status()
 
 
 def save_research(cfg, post_id, research_brief):
@@ -271,6 +360,39 @@ def stream_message(client, **kwargs):
             time.sleep(delay)
 
 
+def batch_message(client, **kwargs):
+    """One Messages request via the Batches API (50% of standard pricing).
+
+    Submits a batch of one, polls until it ends (usually well under an hour;
+    the cron job has no latency requirement), and returns the Message.
+    Server errors and expired/canceled results retry on the same backoff
+    schedule as stream_message.
+    """
+    for attempt, delay in enumerate(RETRY_DELAYS + (None,), start=1):
+        try:
+            batch = client.messages.batches.create(
+                requests=[{"custom_id": "job", "params": kwargs}])
+            while True:
+                b = client.messages.batches.retrieve(batch.id)
+                if b.processing_status == "ended":
+                    break
+                time.sleep(60)
+            result = next(iter(client.messages.batches.results(batch.id)))
+            if result.result.type == "succeeded":
+                return result.result.message
+            err = getattr(result.result, "error", None)
+            raise RuntimeError("batch request {}: {}".format(
+                result.result.type, getattr(err, "error", err)))
+        except (anthropic.AnthropicError, httpx.HTTPError, RuntimeError) as e:
+            if delay is None or (isinstance(e, anthropic.AnthropicError)
+                                 and not _is_retryable(e)):
+                raise
+            print("batch call failed ({}: {}); attempt {}/{}, retrying in {} min"
+                  .format(type(e).__name__, e, attempt, len(RETRY_DELAYS) + 1,
+                          delay // 60), flush=True)
+            time.sleep(delay)
+
+
 def run_research(client, cfg, topic_override, fmt, existing):
     """Web-search research pass. Returns a research brief (markdown/text)."""
     covered = "\n".join(
@@ -307,10 +429,12 @@ def run_research(client, cfg, topic_override, fmt, existing):
         "fill a list piece, or the primary document behind a news piece.\n\n"
         "Return a research brief containing:\n"
         "1. TOPIC: the chosen topic and angle in one sentence\n"
-        "2. WHY NOW: why readers search for / care about this\n"
-        "3. KEY CLAIMS: each factual claim paired with its supporting source URL\n"
-        "4. SOURCES: the full list (title | publisher | url)\n"
-        "5. NARRATIVE IDEAS: 2-3 concrete scenes or hooks a writer could open with\n\n"
+        "2. RATIONALE: one sentence on why this topic was chosen (search "
+        "demand, gap in coverage, timeliness)\n"
+        "3. WHY NOW: why readers search for / care about this\n"
+        "4. KEY CLAIMS: each factual claim paired with its supporting source URL\n"
+        "5. SOURCES: the full list (title | publisher | url)\n"
+        "6. NARRATIVE IDEAS: 2-3 concrete scenes or hooks a writer could open with\n\n"
         "Only include URLs that appeared in your actual search results. Never invent "
         "a URL, a statistic, or a study finding."
     ).format(site=cfg["site_name"], blurb=cfg["brand_blurb"].strip(),
@@ -318,7 +442,7 @@ def run_research(client, cfg, topic_override, fmt, existing):
 
     messages = [{"role": "user", "content": prompt}]
     for _ in range(6):
-        response = stream_message(
+        response = batch_message(
             client,
             model=RESEARCH_MODEL,
             max_tokens=20000,
@@ -329,16 +453,45 @@ def run_research(client, cfg, topic_override, fmt, existing):
         if response.stop_reason != "pause_turn":
             break
         # Server-side tool loop paused; resume where it left off.
-        messages = messages[:1] + [{"role": "assistant", "content": response.content}]
+        messages = messages[:1] + [{"role": "assistant",
+                                    "content": [b.model_dump() for b in response.content]}]
     return collect_text(response)
 
 
-def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback=""):
+def extract_rationale(research_brief):
+    """Pull the one-sentence RATIONALE line out of the research brief."""
+    m = re.search(r"RATIONALE[:\*\s]+(.+)", research_brief)
+    if m:
+        return m.group(1).strip().strip("*").strip()[:500]
+    m = re.search(r"TOPIC[:\*\s]+(.+)", research_brief)
+    return m.group(1).strip().strip("*").strip()[:500] if m else None
+
+
+def internal_links_section(cfg, existing):
+    """Prompt block listing published posts the writer can link to."""
+    published = [p for p in existing if p.get("status") == "published"
+                 and p.get("description")][:40]
+    if not published:
+        return ""
+    lines = "\n".join(
+        "- {} — {}/blog/{}/ — {}".format(
+            p["title"], cfg["site_url"], p["slug"], p["description"])
+        for p in published)
+    return ("\nPUBLISHED POSTS ON THIS BLOG — where genuinely relevant, weave "
+            "1-3 natural inline markdown links to these into the piece (link "
+            "text reads like part of the sentence, never 'click here' or "
+            "'read our post on'). Skip any that don't fit; forced links are "
+            "worse than none:\n{}\n".format(lines))
+
+
+def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="",
+              internal_links=""):
     prompt = (
         "You write for the blog of {site}. Brand context: {blurb}\n\n"
         "STYLE GUIDE (follow it exactly):\n{style}\n"
         "{format_section}"
-        "{standing_feedback}\n"
+        "{standing_feedback}"
+        "{internal_links}\n"
         "RESEARCH BRIEF (cite only these sources; never invent facts or URLs):\n"
         "{research}\n\n"
         "Write the full piece now. Requirements:\n"
@@ -347,6 +500,9 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
         "the brief\n"
         "- mention Joice exactly once or twice, each time linking to "
         "{app_url} — natural asides, not ads\n"
+        "- open with the piece's core answer or idea stated plainly within the "
+        "first two paragraphs — a reader (or an AI assistant quoting you) should "
+        "be able to lift the gist without scrolling\n"
         "- title: draft five candidates per the style guide's headlines section, "
         "output only the one a stranger would click; lowercase, <=60 chars\n"
         "- slug kebab-case; description ~150 chars\n"
@@ -355,10 +511,11 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
              style=style_guide, research=research_brief,
              format_section=format_section(fmt),
              standing_feedback=standing_feedback,
+             internal_links=internal_links,
              min_words=cfg["min_words"], max_words=cfg["max_words"],
              app_url=cfg["app_store_url"])
 
-    response = stream_message(
+    response = batch_message(
         client,
         model=WRITER_MODEL,
         max_tokens=32000,
@@ -370,21 +527,24 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
 
 
 def run_polish(client, cfg, style_guide, research_brief, draft, fmt, feedback=None,
-               standing_feedback=""):
+               standing_feedback="", internal_links=""):
     prompt = (
         "You are the editor for the blog of {site}. Below is a draft piece as JSON, "
         "the research brief it must stay grounded in, and the style guide.\n\n"
         "STYLE GUIDE:\n{style}\n"
         "{format_section}"
-        "{standing_feedback}\n"
+        "{standing_feedback}"
+        "{internal_links}\n"
         "RESEARCH BRIEF:\n{research}\n\n"
         "DRAFT:\n{draft}\n\n"
         "{feedback}"
         "Edit ruthlessly:\n"
         "1. Kill every banned tell from the style guide; rewrite any sentence that "
         "sounds machine-written; vary paragraph and sentence rhythm.\n"
-        "2. Check every inline link exists in the research brief's source list. "
-        "Remove or rewrite any claim whose source isn't there.\n"
+        "2. Check every inline source link exists in the research brief's source "
+        "list. Remove or rewrite any claim whose source isn't there. Internal "
+        "links to this blog's own published posts (listed above) are fine — "
+        "keep 1-3 where they read naturally.\n"
         "3. Ensure Joice is mentioned exactly once or twice with the link {app_url}, "
         "reading as a natural aside.\n"
         "4. Confirm the piece actually delivers its format brief — don't flatten "
@@ -402,10 +562,11 @@ def run_polish(client, cfg, style_guide, research_brief, draft, fmt, feedback=No
              feedback=("PREVIOUS VALIDATION FAILURE — you must fix this: {}\n\n".format(feedback)
                        if feedback else ""),
              standing_feedback=standing_feedback,
+             internal_links=internal_links,
              app_url=cfg["app_store_url"],
              min_words=cfg["min_words"], max_words=cfg["max_words"])
 
-    response = stream_message(
+    response = batch_message(
         client,
         model=WRITER_MODEL,
         max_tokens=32000,
@@ -433,10 +594,16 @@ def validate(post, cfg):
             len(real_sources), cfg["min_sources"]))
 
     inline_links = set(re.findall(r"\]\((https?://[^)\s]+)\)", body))
-    cited = [u for u in inline_links if u != cfg["app_store_url"]]
+    cited = [u for u in inline_links
+             if u != cfg["app_store_url"] and not u.startswith(cfg["site_url"])]
     if len(cited) < cfg["min_sources"]:
         problems.append("Only {} inline source links in the body; need at least {}.".format(
             len(cited), cfg["min_sources"]))
+
+    placeholders = re.findall(r"\[(?:TODO|TBD|PLACEHOLDER|INSERT|XX+)[^\]]*\]|lorem ipsum",
+                              body, re.IGNORECASE)
+    if placeholders:
+        problems.append("Placeholder text present: {}".format(placeholders[:3]))
 
     words = len(re.findall(r"\w+", body))
     if words < cfg["min_words"] * 0.75:
@@ -461,6 +628,8 @@ def main():
     parser.add_argument("--topic", help="Override automatic topic selection")
     parser.add_argument("--format", help="Override automatic format selection "
                                          "(a key from config.yml formats)")
+    parser.add_argument("--draft", action="store_true",
+                        help="Insert as a draft even when auto_publish is on")
     parser.add_argument("--dry-run", metavar="OUT.json",
                         help="Write the finished post to a JSON file instead "
                              "of uploading it to Supabase")
@@ -472,79 +641,128 @@ def main():
 
     existing = existing_posts(cfg)
     last_format = existing[0].get("format") if existing else None
-    fmt = pick_format(cfg, args.format, last_format)
+
+    # Weekly SEO plan first: a pending plan topic wins over the free pick,
+    # and its suggested format is forced. --topic still beats everything.
+    plan_ref = None
+    topic_override = args.topic
+    topic_rationale = None
+    fmt_override = args.format
+    if not topic_override:
+        found = fetch_plan_topic(cfg)
+        if found:
+            plan_ref = found
+            topic = found[3]
+            topic_override = topic.get("topic")
+            topic_rationale = topic.get("rationale")
+            queries = ", ".join(topic.get("target_queries") or []) or None
+            if queries:
+                topic_override += (" (target search queries: {})".format(queries))
+            if not fmt_override and format_by_key(cfg, topic.get("format")):
+                fmt_override = topic["format"]
+            print("topic from weekly SEO plan: {!r} [format {}]".format(
+                topic.get("topic"), fmt_override or "auto"), flush=True)
+
+    fmt = pick_format(cfg, fmt_override, last_format)
     if fmt:
         print("format: {} (previous post: {})".format(
             fmt["key"], last_format or "unknown"), flush=True)
         cfg = format_limits(cfg, fmt)
 
     print("[1/3] researching...", flush=True)
-    research_brief = run_research(client, cfg, args.topic, fmt, existing)
+    research_brief = run_research(client, cfg, topic_override, fmt, existing)
     print(research_brief[:600], "...\n", flush=True)
+    if not topic_rationale:
+        topic_rationale = extract_rationale(research_brief)
 
     standing = reviewer_feedback(cfg)
     if standing:
         print("(applying reviewer feedback from {} previous note(s))".format(
             standing.count("\n- on ")), flush=True)
+    links = internal_links_section(cfg, existing)
 
     print("[2/3] drafting...", flush=True)
-    draft = run_draft(client, cfg, style_guide, research_brief, fmt, standing)
+    draft = run_draft(client, cfg, style_guide, research_brief, fmt, standing,
+                      internal_links=links)
     print("draft: {!r} ({} words)".format(
         draft["title"], len(draft["body_markdown"].split())), flush=True)
 
     print("[3/3] polishing...", flush=True)
     post = run_polish(client, cfg, style_guide, research_brief, draft, fmt,
-                      standing_feedback=standing)
+                      standing_feedback=standing, internal_links=links)
 
     problems = validate(post, cfg)
     if problems:
         print("validation failed, retrying polish with feedback:\n  " +
               "\n  ".join(problems), flush=True)
         post = run_polish(client, cfg, style_guide, research_brief, post, fmt,
-                          feedback="; ".join(problems), standing_feedback=standing)
+                          feedback="; ".join(problems), standing_feedback=standing,
+                          internal_links=links)
         problems = validate(post, cfg)
-
-    if problems:
-        print("FATAL: post failed validation twice:", file=sys.stderr)
-        for p in problems:
-            print("  - " + p, file=sys.stderr)
-        sys.exit(1)
 
     if args.dry_run:
         with open(args.dry_run, "w") as f:
-            json.dump({**post, "research_markdown": research_brief},
+            json.dump({**post, "research_markdown": research_brief,
+                       "topic_rationale": topic_rationale,
+                       "validation_problems": problems},
                       f, indent=2, ensure_ascii=False)
         print("dry run: wrote {} (not uploaded)".format(args.dry_run))
         print("title: {} [{}]".format(post["title"], fmt["key"] if fmt else "-"))
         return
 
+    # Auto-publish when clean; validation failures land as drafts for a human.
+    publish = cfg.get("auto_publish") and not args.draft and not problems
+    status = "published" if publish else "draft"
+    if problems:
+        print("validation failed twice — inserting as draft for manual review:",
+              file=sys.stderr)
+        for p in problems:
+            print("  - " + p, file=sys.stderr)
+
     taken = {p["slug"] for p in existing_posts(cfg)}
-    row = insert_draft(cfg, post, taken, fmt)
+    row = insert_post(cfg, post, taken, fmt, status=status,
+                      topic_rationale=topic_rationale)
     save_research(cfg, row["id"], research_brief)
-    print("uploaded draft '{}' (slug: {})".format(row["title"], row["slug"]))
-    print("review + publish: flip status to 'published' in the Supabase Table "
-          "Editor and it is live immediately.")
+
+    if plan_ref:
+        report_id, plan, index, _ = plan_ref
+        mark_plan_topic(cfg, report_id, plan, index, "done", post_id=row["id"])
+
+    post_url = "{}/blog/{}/".format(cfg["site_url"], row["slug"])
+    if publish:
+        log_seo_event(cfg, row["id"], row["slug"], "published",
+                      detail=topic_rationale)
+        ping_indexnow(cfg, [post_url])
+        print("published '{}' — live at {} within ~5 minutes".format(
+            row["title"], post_url))
+        print("edit or unpublish any time at joiceapp.com/review/")
+    else:
+        print("uploaded draft '{}' (slug: {}) — publish from "
+              "joiceapp.com/review/".format(row["title"], row["slug"]))
 
     # surface details in the GitHub Actions job summary, if running in CI
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         with open(summary_path, "a") as f:
             f.write(
-                "## Draft ready for review\n\n"
+                "## {headline}\n\n"
                 "**{title}**\n\n{desc}\n\n"
                 "- format: {fmt}\n"
                 "- slug: `{slug}`\n"
                 "- tags: {tags}\n"
-                "- sources: {nsources}\n\n"
-                "Review it in the [Supabase Table Editor]"
-                "(https://supabase.com/dashboard/project/{ref}/editor) and set "
-                "`status` to `published` to make it live at "
-                "{site}/blog/{slug}/\n".format(
+                "- sources: {nsources}\n"
+                "- why this topic: {why}\n\n"
+                "{footer}\n".format(
+                    headline=("Published" if publish
+                              else "Draft needs attention (failed validation)"
+                              if problems else "Draft ready for review"),
                     title=row["title"], desc=row["description"], slug=row["slug"],
                     fmt=fmt["key"] if fmt else "-",
                     tags=", ".join(post["tags"]), nsources=len(post["sources"]),
-                    ref=cfg["supabase_url"].split("//")[1].split(".")[0],
-                    site=cfg["site_url"]))
+                    why=topic_rationale or "-",
+                    footer=("Live at {} — edit at https://joiceapp.com/review/"
+                            .format(post_url) if publish else
+                            "Review at https://joiceapp.com/review/")))
 
 
 if __name__ == "__main__":

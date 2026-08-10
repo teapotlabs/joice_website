@@ -100,3 +100,25 @@ min_sources: 3
 max_sources: 8
 min_words: 900
 max_words: 1600
+
+# Auto-publish: posts that pass validation go live immediately (status
+# 'published'); validation failures land as drafts for manual attention.
+# Override per-run with --draft.
+auto_publish: true
+
+# IndexNow (Bing/DuckDuckGo/etc.) — key is verified against
+# https://joiceapp.com/<key>.txt, committed at the repo root.
+indexnow_key: "3cfb3d04114bc7074a28f5adf2a5c94a"
+
+# Weekly SEO review (pipeline/seo_review.py, Sundays).
+seo:
+  # Google Search Console property. Domain property form; switch to the
+  # full URL (e.g. "https://joiceapp.com/") if verified as URL-prefix.
+  site: "sc-domain:joiceapp.com"
+  model: "claude-sonnet-5"
+  window_days: 28          # analysis window (ends 3 days ago; GSC data lags)
+  min_impressions: 20      # ignore query/page rows below this
+  striking_distance: [4, 20]  # avg position band worth optimizing
+  max_topics: 5            # new-post proposals per week
+  max_optimizations: 3     # existing-post revisions per week
+  zero_traction_weeks: 6   # published this long with ~no impressions = flag
