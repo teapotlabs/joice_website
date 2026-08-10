@@ -183,6 +183,7 @@ const signoutBtn = document.getElementById("signout");
 
 let posts = [];
 let guidance = [];
+let seoReports = null;
 let current = null;
 
 // ------------------------------------------------------------------ helpers
@@ -319,21 +320,30 @@ function renderList() {
                 ${fmtDate(p.published_at || p.created_at)} &middot;
                 ${(p.tags || []).join(", ")}
                 ${p.review_notes ? ' &middot; <span class="rv-notes-flag">has notes</span>' : ""}
+                ${p.pending_revision ? ' &middot; <span class="rv-notes-flag">revision ready</span>' : ""}
+                ${p.revision_requested ? ' &middot; <span class="rv-notes-flag">revision queued</span>' : ""}
             </div>
         </div>`;
 
     const active = guidance.find((g) => g.is_active);
     app.innerHTML = `
         <div class="rv-section-label">
-            <span>awaiting your review (${pending.length})</span>
-            <button class="rv-link" id="open-guidance">writing guidance ${active ? "v" + active.version : ""} &rarr;</button>
+            <span>needs attention (${pending.length})</span>
+            <span>
+                <button class="rv-link" id="open-seo">seo plan &rarr;</button> &nbsp;
+                <button class="rv-link" id="open-guidance">writing guidance ${active ? "v" + active.version : ""} &rarr;</button>
+            </span>
         </div>
         ${pending.map(card).join("") ||
-          '<p class="rv-empty">nothing waiting — the pipeline runs at ~6am and ~3pm pacific.</p>'}
+          '<p class="rv-empty">nothing waiting — posts publish automatically on weekdays; drafts land here only when validation fails.</p>'}
         <div class="rv-section-label"><span>published (${published.length})</span></div>
         ${published.map(card).join("")}`;
 
     document.getElementById("open-guidance").onclick = () => renderGuidance();
+    document.getElementById("open-seo").onclick = () => act(async () => {
+        if (!seoReports) seoReports = await rpc("seo_report_list");
+        renderSeo();
+    });
     app.querySelectorAll(".rv-card.tappable").forEach((el) => {
         el.onclick = () => {
             current = posts.find((p) => p.id === el.dataset.id);
@@ -396,6 +406,44 @@ function renderGuidance() {
     });
 }
 
+// --------------------------------------------------------------------- seo
+
+function renderSeo() {
+    const activeReport = (seoReports || []).find((r) => r.status === "active");
+    const past = (seoReports || []).filter((r) => r !== activeReport);
+    const planBits = (r) => {
+        const topics = (r.plan?.topics || []).map((t) => `
+            <div class="rv-meta" style="margin-top:6px">
+                ${t.state === "done" ? "&#10003;" : t.state === "skipped" ? "&#10007;" : "&#9711;"}
+                <strong>${esc(t.topic)}</strong> [${esc(t.format)}] — ${esc(t.rationale)}
+            </div>`).join("");
+        const opts = (r.plan?.optimizations || []).map((o) => `
+            <div class="rv-meta" style="margin-top:6px">&#9998; /blog/${esc(o.slug)}/ — ${esc(o.diagnosis)}</div>`).join("");
+        return topics + opts;
+    };
+    app.innerHTML = `
+        <button class="rv-back" id="back">&larr; all posts</button>
+        ${activeReport ? `
+        <div class="rv-card">
+            <span class="rv-status active">this week — ${fmtDate(activeReport.created_at)}</span>
+            <h2>weekly seo plan</h2>
+            ${planBits(activeReport)}
+            <details style="margin-top:12px" open><summary class="rv-hint" style="cursor:pointer">planning doc</summary>
+                <div class="rv-preview">${mdToHtml(activeReport.plan_doc || "")}</div>
+            </details>
+        </div>` : '<p class="rv-empty">no seo report yet — the planner runs sunday mornings.</p>'}
+        <div class="rv-section-label"><span>past weeks</span></div>
+        ${past.map((r) => `
+            <div class="rv-card">
+                <span class="rv-status old">${fmtDate(r.created_at)}</span>
+                ${planBits(r)}
+                <details style="margin-top:10px"><summary class="rv-hint" style="cursor:pointer">planning doc</summary>
+                    <div class="rv-preview">${mdToHtml(r.plan_doc || "")}</div>
+                </details>
+            </div>`).join("") || '<p class="rv-empty">no history yet.</p>'}`;
+    document.getElementById("back").onclick = () => renderList();
+}
+
 // ------------------------------------------------------------------- detail
 
 function renderDetail() {
@@ -426,6 +474,27 @@ function renderDetail() {
             </div>
         </div>
 
+        ${p.pending_revision ? `
+        <div class="rv-card">
+            <span class="rv-status rewrite_requested">revision ready</span>
+            <h2>pending revision</h2>
+            <p class="rv-hint">${esc(p.pending_revision.notes || "")}</p>
+            <div class="rv-meta" style="margin-top:8px">
+                new title: ${esc(p.pending_revision.title)}<br>
+                ${(p.pending_revision.body_markdown || "").match(/\w+/g)?.length || 0} words
+                (live: ${(p.body_md.match(/\w+/g) || []).length})
+            </div>
+            <details style="margin-top:10px"><summary class="rv-hint" style="cursor:pointer">preview revision</summary>
+                <div class="rv-preview" id="rev-preview"></div>
+            </details>
+            <div class="rv-actions">
+                <button class="rv-btn primary" id="apply-revision">apply revision</button>
+                <button class="rv-btn danger" id="discard-revision">discard</button>
+            </div>
+            <p class="rv-hint">The live post is untouched until you apply. Applying keeps
+            the slug, so the URL never changes.</p>
+        </div>` : ""}
+
         <div class="rv-card">
             <label class="rv-label" for="f-notes" style="margin-top:0">your notes</label>
             <textarea class="rv-textarea" id="f-notes" rows="5"
@@ -434,11 +503,13 @@ function renderDetail() {
                 <button class="rv-btn ghost" id="save-notes">save notes</button>
                 ${p.status === "rewrite_requested"
                     ? '<button class="rv-btn danger" id="cancel-rewrite">cancel rewrite</button>'
+                    : p.revision_requested
+                    ? '<button class="rv-btn danger" id="cancel-revision">cancel queued revision</button>'
                     : '<button class="rv-btn warn" id="request-rewrite">request rewrite</button>'}
             </div>
-            <p class="rv-hint">Rewrites run automatically about once an hour against your notes
-            and return here as a fresh draft. Notes are also distilled into the standing
-            writing guidance for all future posts.</p>
+            <p class="rv-hint">${isPublished
+                ? "Rewrites of published posts run about once an hour and come back here as a pending revision — the post stays live the whole time. Notes are also distilled into the standing writing guidance."
+                : "Rewrites run automatically about once an hour against your notes and return here as a fresh draft. Notes are also distilled into the standing writing guidance for all future posts."}</p>
         </div>`;
 
     document.getElementById("back").onclick = () => renderList();
@@ -489,10 +560,42 @@ function renderDetail() {
     if (rewrite) rewrite.onclick = () => act(async () => {
         const notes = document.getElementById("f-notes").value.trim();
         if (!notes) { toast("add notes first — they drive the rewrite", true); return; }
-        await rpc("review_save_notes", { p_id: p.id, p_notes: notes });
-        merge(await rpc("review_set_status", { p_id: p.id, p_status: "rewrite_requested" }));
-        toast("rewrite queued — runs within the hour");
+        if (isPublished) {
+            // Live posts stay live: queue a targeted revision instead of
+            // pulling the post back to draft.
+            merge(await rpc("review_request_revision", { p_id: p.id, p_notes: notes }));
+            toast("revision queued — post stays live; runs within the hour");
+        } else {
+            await rpc("review_save_notes", { p_id: p.id, p_notes: notes });
+            merge(await rpc("review_set_status", { p_id: p.id, p_status: "rewrite_requested" }));
+            toast("rewrite queued — runs within the hour");
+        }
         renderList();
+    });
+
+    const revPreview = document.getElementById("rev-preview");
+    if (revPreview && p.pending_revision)
+        revPreview.innerHTML = mdToHtml(p.pending_revision.body_markdown || "");
+
+    const applyRev = document.getElementById("apply-revision");
+    if (applyRev) applyRev.onclick = () => act(async () => {
+        merge(await rpc("review_apply_revision", { p_id: p.id }));
+        toast("revision applied — live in ~5 minutes");
+        renderDetail();
+    });
+
+    const discardRev = document.getElementById("discard-revision");
+    if (discardRev) discardRev.onclick = () => act(async () => {
+        merge(await rpc("review_discard_revision", { p_id: p.id }));
+        toast("revision discarded");
+        renderDetail();
+    });
+
+    const cancelRev = document.getElementById("cancel-revision");
+    if (cancelRev) cancelRev.onclick = () => act(async () => {
+        merge(await rpc("review_discard_revision", { p_id: p.id }));
+        toast("queued revision cancelled");
+        renderDetail();
     });
 
     const cancel = document.getElementById("cancel-rewrite");
