@@ -2,10 +2,12 @@ name: Generate blog post
 
 on:
   schedule:
-    # Twice daily: ~6am and ~3pm Pacific (13:07 / 22:07 UTC).
-    # Off-the-hour minutes avoid GitHub's top-of-hour cron congestion.
-    - cron: "7 13 * * *"
-    - cron: "7 22 * * *"
+    # Twice daily on weekdays: ~6am and ~3pm Pacific (13:07 / 22:07 UTC),
+    # Monday-Friday. Weekends are off; Sunday runs the SEO planner instead
+    # (blog-seo-review.yml). Off-the-hour minutes avoid GitHub's
+    # top-of-hour cron congestion.
+    - cron: "7 13 * * 1-5"
+    - cron: "7 22 * * 1-5"
   workflow_dispatch:
     inputs:
       topic:
@@ -16,6 +18,11 @@ on:
         description: "Optional format override (essay, listicle, news_commentary, question, myth_busting; blank for weighted auto-pick)"
         required: false
         default: ""
+      draft:
+        description: "Insert as draft instead of auto-publishing"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -54,5 +61,8 @@ jobs:
           fi
           if [ -n "${{ github.event.inputs.format }}" ]; then
             args+=(--format "${{ github.event.inputs.format }}")
+          fi
+          if [ "${{ github.event.inputs.draft }}" = "true" ]; then
+            args+=(--draft)
           fi
           python3 pipeline/generate_post.py "${args[@]}"

@@ -3,7 +3,7 @@
 
 import {
   SITE, APP_STORE_URL, BLOG_TITLE, BLOG_DESC,
-  fetchPosts, validSlug, esc, isoDate, prettyDate, monthLabel,
+  fetchPosts, validSlug, esc, isoDate, lastModified, prettyDate, monthLabel,
   readingMinutes, mdToHtml, headHtml, NAV, FOOTER, htmlResponse, errorPage,
 } from "../../functions-lib/blog.js";
 
@@ -74,6 +74,7 @@ ${sourceItems}
     headline: post.title,
     description: post.description,
     datePublished: isoDate(post.published_at),
+    dateModified: lastModified(post),
     url,
     keywords: (post.tags || []).join(", "),
     author: { "@type": "Organization", name: "Joice", url: SITE },
@@ -101,6 +102,7 @@ ${sourceItems}
   const articleMeta = [
     '    <meta property="og:type" content="article">',
     `    <meta property="article:published_time" content="${isoDate(post.published_at)}">`,
+    `    <meta property="article:modified_time" content="${lastModified(post)}">`,
     `    <meta name="keywords" content="${esc((post.tags || []).join(", "))}">`,
     ...(post.tags || []).map((t) =>
       `    <meta property="article:tag" content="${esc(t)}">`),

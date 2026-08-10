@@ -13,7 +13,7 @@ export const BLOG_TITLE = "the joice journal";
 export const BLOG_DESC = "Essays on journaling, mental health, and finding your way — from the makers of Joice, the voice journal that talks back.";
 export const BRAND_BLURB = "Joice is an iOS voice-journaling app. You talk out loud about whatever is on your mind and an AI companion listens like a friend — asking gentle follow-up questions, never giving unsolicited advice. Entries are transcribed and searchable, recurring life themes are surfaced over time, and each week Joice writes you a warm reflection on what you talked about. It is private and encrypted, and aimed at people who find blank pages hard but talking easy.";
 
-const LIST_FIELDS = "slug,title,description,tags,sources,body_md,published_at";
+const LIST_FIELDS = "slug,title,description,tags,sources,body_md,published_at,updated_at";
 
 async function supabaseGet(path) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -46,6 +46,13 @@ export function esc(s) {
 
 export function isoDate(ts) {
   return String(ts).slice(0, 10);
+}
+
+// Freshness signal: last content edit if later than publication.
+export function lastModified(p) {
+  const pub = isoDate(p.published_at);
+  const upd = p.updated_at ? isoDate(p.updated_at) : pub;
+  return upd > pub ? upd : pub;
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june",

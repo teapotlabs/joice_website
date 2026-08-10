@@ -1,0 +1,35 @@
+name: Weekly SEO review
+
+on:
+  schedule:
+    # Sundays ~6am Pacific (13:07 UTC during PDT; 5:07am in PST).
+    # Produces the week's planning doc before Monday's first generation run.
+    - cron: "7 13 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blog-seo-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Review Search Console and plan the week
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+        run: python3 pipeline/seo_review.py

@@ -1,7 +1,7 @@
 // /sitemap.xml — regenerated from Supabase on request so newly published
 // posts appear without a deploy.
 
-import { SITE, fetchPosts, isoDate } from "../functions-lib/blog.js";
+import { SITE, fetchPosts, lastModified } from "../functions-lib/blog.js";
 
 export async function onRequestGet() {
   let posts = [];
@@ -17,7 +17,7 @@ export async function onRequestGet() {
   for (const p of posts) {
     urls.push(`  <url>
     <loc>${SITE}/blog/${p.slug}/</loc>
-    <lastmod>${isoDate(p.published_at)}</lastmod>
+    <lastmod>${lastModified(p)}</lastmod>
   </url>`);
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
