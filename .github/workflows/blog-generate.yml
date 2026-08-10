@@ -2,12 +2,12 @@ name: Generate blog post
 
 on:
   schedule:
-    # Twice daily on weekdays: ~6am and ~3pm Pacific (13:07 / 22:07 UTC),
-    # Monday-Friday. Weekends are off; Sunday runs the SEO planner instead
-    # (blog-seo-review.yml). Off-the-hour minutes avoid GitHub's
-    # top-of-hour cron congestion.
-    - cron: "7 13 * * 1-5"
-    - cron: "7 22 * * 1-5"
+    # Twice daily: ~6am and ~3pm Pacific (13:07 / 22:07 UTC). The Sunday
+    # SEO planner (blog-seo-review.yml) runs an hour earlier so the week's
+    # plan exists before Sunday's first generation run. Off-the-hour
+    # minutes avoid GitHub's top-of-hour cron congestion.
+    - cron: "7 13 * * *"
+    - cron: "7 22 * * *"
   workflow_dispatch:
     inputs:
       topic:
@@ -20,6 +20,11 @@ on:
         default: ""
       draft:
         description: "Insert as draft instead of auto-publishing"
+        required: false
+        default: false
+        type: boolean
+      fast:
+        description: "Use the streaming API instead of the Batch API (for one-offs someone is waiting on)"
         required: false
         default: false
         type: boolean
@@ -64,5 +69,8 @@ jobs:
           fi
           if [ "${{ github.event.inputs.draft }}" = "true" ]; then
             args+=(--draft)
+          fi
+          if [ "${{ github.event.inputs.fast }}" = "true" ]; then
+            args+=(--fast)
           fi
           python3 pipeline/generate_post.py "${args[@]}"

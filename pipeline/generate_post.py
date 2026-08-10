@@ -26,7 +26,9 @@ failures land as 'draft' for manual attention. New URLs are pinged to
 IndexNow and logged to seo_events.
 
 Model calls go through the Message Batches API (50% price of the regular
-API; the cron job has no latency requirement).
+API; the cron job has no latency requirement). One-off runs a human is
+waiting on (the review console's "generate now" button) pass --fast to
+use the streaming API instead.
 
 Environment:
   ANTHROPIC_API_KEY      Claude API key
@@ -360,6 +362,18 @@ def stream_message(client, **kwargs):
             time.sleep(delay)
 
 
+# Scheduled runs use the Batches API (50% price; nobody is waiting).
+# --fast switches to the streaming API for one-off runs a human kicked off
+# from the review console and is actively waiting on.
+FAST_MODE = False
+
+
+def send_message(client, **kwargs):
+    if FAST_MODE:
+        return stream_message(client, **kwargs)
+    return batch_message(client, **kwargs)
+
+
 def batch_message(client, **kwargs):
     """One Messages request via the Batches API (50% of standard pricing).
 
@@ -442,7 +456,7 @@ def run_research(client, cfg, topic_override, fmt, existing):
 
     messages = [{"role": "user", "content": prompt}]
     for _ in range(6):
-        response = batch_message(
+        response = send_message(
             client,
             model=RESEARCH_MODEL,
             max_tokens=20000,
@@ -515,7 +529,7 @@ def run_draft(client, cfg, style_guide, research_brief, fmt, standing_feedback="
              min_words=cfg["min_words"], max_words=cfg["max_words"],
              app_url=cfg["app_store_url"])
 
-    response = batch_message(
+    response = send_message(
         client,
         model=WRITER_MODEL,
         max_tokens=32000,
@@ -566,7 +580,7 @@ def run_polish(client, cfg, style_guide, research_brief, draft, fmt, feedback=No
              app_url=cfg["app_store_url"],
              min_words=cfg["min_words"], max_words=cfg["max_words"])
 
-    response = batch_message(
+    response = send_message(
         client,
         model=WRITER_MODEL,
         max_tokens=32000,
@@ -630,10 +644,18 @@ def main():
                                          "(a key from config.yml formats)")
     parser.add_argument("--draft", action="store_true",
                         help="Insert as a draft even when auto_publish is on")
+    parser.add_argument("--fast", action="store_true",
+                        help="Use the streaming API instead of the Batch API "
+                             "(for one-off runs someone is waiting on)")
     parser.add_argument("--dry-run", metavar="OUT.json",
                         help="Write the finished post to a JSON file instead "
                              "of uploading it to Supabase")
     args = parser.parse_args()
+
+    global FAST_MODE
+    FAST_MODE = args.fast
+    if FAST_MODE:
+        print("fast mode: streaming API (no batch discount)", flush=True)
 
     cfg = load_config()
     style_guide = load_effective_style_guide(cfg)

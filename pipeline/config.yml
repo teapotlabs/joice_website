@@ -115,7 +115,7 @@ seo:
   # Google Search Console property. Domain property form; switch to the
   # full URL (e.g. "https://joiceapp.com/") if verified as URL-prefix.
   site: "sc-domain:joiceapp.com"
-  model: "claude-sonnet-5"
+  model: "claude-fable-5"
   window_days: 28          # analysis window (ends 3 days ago; GSC data lags)
   min_impressions: 20      # ignore query/page rows below this
   striking_distance: [4, 20]  # avg position band worth optimizing
