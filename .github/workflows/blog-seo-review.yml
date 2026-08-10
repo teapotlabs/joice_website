@@ -2,9 +2,10 @@ name: Weekly SEO review
 
 on:
   schedule:
-    # Sundays ~6am Pacific (13:07 UTC during PDT; 5:07am in PST).
-    # Produces the week's planning doc before Monday's first generation run.
-    - cron: "7 13 * * 0"
+    # Sundays ~5am Pacific (12:07 UTC during PDT), an hour before the
+    # 13:07 generation run, so the planning doc is ready by ~6am and the
+    # week's plan exists before Sunday's first post is generated.
+    - cron: "7 12 * * 0"
   workflow_dispatch: {}
 
 permissions:

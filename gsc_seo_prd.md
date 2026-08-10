@@ -48,9 +48,10 @@ generation runs then execute.
 
 New workflow `.github/workflows/blog-seo-review.yml`:
 
-- cron: Sundays `7 13 * * 0` (~6am Pacific), so the planning doc exists
-  well before Monday's first generation run. Weekday generation runs
-  Mon-Fri only (`7 13 * * 1-5` and `7 22 * * 1-5`); weekends are off.
+- cron: Sundays `7 12 * * 0` (~5am Pacific), an hour before the day's
+  first generation run, so the planning doc is ready by ~6am and the
+  week's plan exists before Sunday's first post. Generation runs twice
+  daily, seven days a week (`7 13 * * *` and `7 22 * * *`).
 - `workflow_dispatch` for manual runs.
 - Runs new script `pipeline/seo_review.py` with `ANTHROPIC_API_KEY`,
   `SUPABASE_SECRET_KEY`, `GSC_SERVICE_ACCOUNT_JSON`.
@@ -96,12 +97,10 @@ One model call per week (same retry wrapper `stream_message`) takes the
 findings object plus context (pillars, formats, recent post list, last
 week's plan and its outcomes) and returns, via a JSON schema. Because
 step 2 has already done the number-crunching in Python, this is a
-synthesis task, not deep research — run it on **Sonnet 5**
-(`claude-sonnet-5`, $3/$15 per MTok vs Opus's $5/$25) rather than adding
-another weekly Opus call. One call a week either way, so the cost is
-minor — the point is that the whole Sunday job is designed to be cheap:
-zero web searches, mechanical analysis in plain Python, one mid-tier
-model call.
+synthesis task — one call a week, so model cost is minor either way.
+(Decided 2026-08-10: run it on **Fable 5** for the strongest weekly plan;
+the job stays cheap regardless — zero web searches, mechanical analysis
+in plain Python, a single model call.)
 
 - **`learnings`** (prose): what this week's data says — which formats/topics
   earn impressions, title patterns that get clicked, patterns to stop.
@@ -295,13 +294,11 @@ full polish pass on Fable 5 ($10/$50 per MTok — output is the expensive
 half). At ~14 posts/week that's ~60 posts/month, most of which the review
 gate never publishes. Measures, ranked by expected impact:
 
-1. **Generate less, not cheaper (biggest lever, zero quality risk).**
-   With auto-publish there's no draft backlog to gate on — the volume dial
-   is the cron itself. Fourteen posts/week is a content-farm cadence that
-   SEO doesn't reward; drop to once daily (halves spend outright) and let
-   the weekly GSC plan decide what's worth writing. If a backlog of
-   unpublished drafts ever does accumulate (validation failures, `--draft`
-   runs), a cheap guard in `generate_post.py` can still skip the run.
+1. **The volume dial is the cron itself.** With auto-publish there's no
+   draft backlog to gate on. (Decided 2026-08-10: stay at twice daily,
+   seven days a week — the Batch API discount and GSC-targeted topics
+   carry the efficiency instead. If index-coverage checks show new posts
+   going unindexed, revisit cadence first.)
 
 2. **Batch API — 50% off everything (no quality change).** The pipeline is
    a cron job; nobody is waiting on latency. The Message Batches API

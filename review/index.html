@@ -165,6 +165,16 @@
             line-height: 1.6; margin: 6px 0 0 20px; padding-left: 18px; }
         .rv-plan-actions li { margin-bottom: 3px; }
 
+        .rv-impetus {
+            font-size: 12.5px; color: var(--ink-soft); line-height: 1.6;
+            background: var(--cream-deep);
+            border-left: 3px solid var(--sage);
+            border-radius: 0 10px 10px 0;
+            padding: 9px 12px; margin-top: 12px;
+        }
+        .rv-impetus strong { color: var(--fern); font-weight: 700;
+            text-transform: lowercase; }
+
         /* Plan doc: reads as a document, not a giant-serif preview */
         .rv-plandoc { font-size: 13.5px; line-height: 1.7; }
         .rv-plandoc h2 { font-family: var(--serif); font-size: 17px;
@@ -413,6 +423,7 @@ function renderList() {
         <div class="rv-section-label">
             <span>needs attention (${pending.length})</span>
             <span>
+                <button class="rv-link" id="generate-now">&#10024; generate now</button> &nbsp;
                 <button class="rv-link" id="open-seo">seo plan &rarr;</button> &nbsp;
                 <button class="rv-link" id="open-guidance">writing guidance ${active ? "v" + active.version : ""} &rarr;</button>
             </span>
@@ -426,6 +437,24 @@ function renderList() {
     document.getElementById("open-seo").onclick = () => act(async () => {
         if (!seoReports) seoReports = await rpc("seo_report_list");
         renderSeo();
+    });
+    const genBtn = document.getElementById("generate-now");
+    genBtn.onclick = () => act(async () => {
+        if (!confirm("Generate a one-off post now? It researches, writes, and " +
+                     "publishes automatically (~10-20 minutes).")) return;
+        genBtn.disabled = true;
+        try {
+            const { data: { session } } = await sb.auth.getSession();
+            const res = await fetch("/api/generate", {
+                method: "POST",
+                headers: { authorization: "Bearer " + (session?.access_token || "") },
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(body.error || "request failed (" + res.status + ")");
+            toast("generation started — the post will appear here in ~10-20 min");
+        } finally {
+            genBtn.disabled = false;
+        }
     });
     app.querySelectorAll(".rv-card.tappable").forEach((el) => {
         el.onclick = () => {
@@ -559,6 +588,8 @@ function renderDetail() {
         <div class="rv-card">
             <span class="rv-status ${p.status}">${STATUS_LABEL[p.status]}</span>
             <div class="rv-meta">/blog/${esc(p.slug)}/ &middot; ${(p.body_md.match(/\w+/g) || []).length} words</div>
+            ${p.topic_rationale ? `
+            <div class="rv-impetus"><strong>why this post exists:</strong> ${esc(p.topic_rationale)}</div>` : ""}
 
             <label class="rv-label" for="f-title">title</label>
             <input class="rv-input" id="f-title" value="${esc(p.title)}">
