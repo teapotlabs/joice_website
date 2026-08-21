@@ -1,4 +1,8 @@
-anthropic>=0.92.0
+# anthropic 1.0.0 switched its HTTP client from httpx to httpx2, so httpx is no
+# longer pulled in transitively and the SDK's exception surface changed; the
+# pipeline catches httpx.HTTPError directly, so stay on 0.x until we migrate.
+anthropic>=0.92.0,<1.0
+httpx>=0.27
 PyYAML>=6.0
 requests>=2.31
 google-auth>=2.23
