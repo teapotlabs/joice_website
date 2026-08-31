@@ -154,7 +154,7 @@ ${sourcesSection}
                 <img src="/assets/leaf-branch.png" alt="" class="blog-cta-leaf">
                 <div>
                     <h2>talk it out with joice</h2>
-                    <p>A voice journal that listens like a friend. Available on iOS.</p>
+                    <p>A daily voice journal that talks back. Available on iOS.</p>
                 </div>
                 <a href="${APP_STORE_URL}" class="btn-primary">get the app</a>
             </aside>
